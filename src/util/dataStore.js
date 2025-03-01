@@ -123,6 +123,9 @@ const store = (set, get) => ({
 		const data = await getUploads();
 		set({ uploads: data, uploadsLoading: false });
 	},
+
+	editingNotesTransaction: null,
+	setEditingNotesTransaction: (editingNotesTransaction) => set(() => ({ editingNotesTransaction })),
 });
 
 export const useDataStore = create(store);

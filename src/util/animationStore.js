@@ -28,6 +28,19 @@ const store = (set, get) => ({
 		closeMenu(setUploadModalVisible, setUploadModalAnimating);
 	},
 
+	notesModalVisible: false,
+	notesModalAnimating: false,
+	setNotesModalVisible: (value) => set({ notesModalVisible: value }),
+	setNotesModalAnimating: (value) => set({ notesModalAnimating: value }),
+	openNotesModal: () => {
+		const { setNotesModalVisible, setNotesModalAnimating } = get();
+		openMenu(setNotesModalVisible, setNotesModalAnimating);
+	},
+	closeNotesModal: () => {
+		const { setNotesModalVisible, setNotesModalAnimating } = get();
+		closeMenu(setNotesModalVisible, setNotesModalAnimating);
+	},
+
 	bulkActionsMenuVisible: false,
 	bulkActionsMenuAnimating: false,
 	setBulkActionsMenuVisible: (value) => set({ bulkActionsMenuVisible: value }),

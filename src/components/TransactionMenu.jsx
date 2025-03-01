@@ -5,13 +5,14 @@ import { setTransactionIgnored, deleteTransaction } from "../util/supabaseQuerie
 import { getDashboardStats } from "../util/statsUtil";
 import { Link } from "react-router-dom";
 
-const TransactionMenu = ({ transactionId, ignored }) => {
+const TransactionMenu = ({ transaction }) => {
 	const { visibleTransactionMenu, animatingTransactionMenu, openTransactionMenu, closeTransactionMenu } =
 		useAnimationStore((state) => ({
 			visibleTransactionMenu: state.visibleTransactionMenu,
 			animatingTransactionMenu: state.animatingTransactionMenu,
 			openTransactionMenu: state.openTransactionMenu,
 			closeTransactionMenu: state.closeTransactionMenu,
+			openNotesModal: state.openNotesModal,
 		}));
 	const {
 		transactions,
@@ -21,6 +22,7 @@ const TransactionMenu = ({ transactionId, ignored }) => {
 		setNotification,
 		setEditingMerchantSetting,
 		setActiveSetting,
+		setEditingNotesTransaction,
 	} = useDataStore((state) => ({
 		transactions: state.transactions,
 		setTransactions: state.setTransactions,
@@ -29,27 +31,29 @@ const TransactionMenu = ({ transactionId, ignored }) => {
 		setNotification: state.setNotification,
 		setEditingMerchantSetting: state.setEditingMerchantSetting,
 		setActiveSetting: state.setActiveSetting,
+		editingNotesTransaction: state.editingNotesTransaction,
+		setEditingNotesTransaction: state.setEditingNotesTransaction,
 	}));
 
 	const toggleTransactionMenu = () => {
-		if (visibleTransactionMenu === transactionId) {
+		if (visibleTransactionMenu === transaction.id) {
 			closeTransactionMenu();
 		} else {
-			openTransactionMenu(transactionId);
+			openTransactionMenu(transaction.id);
 		}
 	};
 
 	const updateTransactionIgnored = async (ignore) => {
 		toggleTransactionMenu();
-		const success = await setTransactionIgnored(transactionId, ignore);
+		const success = await setTransactionIgnored(transaction.id, ignore);
 
 		// Instead of calling fetchTransactions, which causes loading animations, just update the data in place on success
 		if (success) {
-			const newTransactions = transactions.map((transaction) => {
-				if (transaction.id === transactionId) {
-					return { ...transaction, ignored: ignore };
+			const newTransactions = transactions.map((t) => {
+				if (t.id === transaction.id) {
+					return { ...t, ignored: ignore };
 				}
-				return transaction;
+				return t;
 			});
 			setTransactions(newTransactions);
 			setDashboardStats(await getDashboardStats(newTransactions, filters));
@@ -60,10 +64,10 @@ const TransactionMenu = ({ transactionId, ignored }) => {
 
 	const onClickDelete = async () => {
 		toggleTransactionMenu();
-		const success = await deleteTransaction(transactionId);
+		const success = await deleteTransaction(transaction.id);
 
 		if (success) {
-			const newTransactions = transactions.filter((transaction) => transaction.id !== transactionId);
+			const newTransactions = transactions.filter((transaction) => transaction.id !== transaction.id);
 			setTransactions(newTransactions);
 			setDashboardStats(await getDashboardStats(newTransactions, filters));
 		} else {
@@ -72,7 +76,7 @@ const TransactionMenu = ({ transactionId, ignored }) => {
 	};
 
 	const onClickSaveMerchant = () => {
-		const matchingTransaction = transactions.find((transaction) => transaction.id === transactionId);
+		const matchingTransaction = transactions.find((transaction) => transaction.id === transaction.id);
 		if (matchingTransaction) {
 			setEditingMerchantSetting({
 				id: -1,
@@ -84,6 +88,10 @@ const TransactionMenu = ({ transactionId, ignored }) => {
 		}
 	};
 
+	const onClickNotes = () => {
+		setEditingNotesTransaction(transaction);
+	};
+
 	return (
 		<div className="transaction-menu w-full relative flex items-center justify-start">
 			<div className="w-full max-w-4">
@@ -91,11 +99,11 @@ const TransactionMenu = ({ transactionId, ignored }) => {
 					<img src="./dots.svg" />
 				</button>
 			</div>
-			{(visibleTransactionMenu === transactionId || animatingTransactionMenu === transactionId) && (
+			{(visibleTransactionMenu === transaction.id || animatingTransactionMenu === transaction.id) && (
 				<div
 					className={`${
-						animatingTransactionMenu === transactionId
-							? visibleTransactionMenu === transactionId
+						animatingTransactionMenu === transaction.id
+							? visibleTransactionMenu === transaction.id
 								? "enter"
 								: "exit"
 							: ""
@@ -110,7 +118,16 @@ const TransactionMenu = ({ transactionId, ignored }) => {
 							Save Merchant
 						</button>
 					</Link>
-					{ignored ? (
+					<button
+						onClick={onClickNotes}
+						className="transaction-menu-button w-full text-start font-normal text-xs hover:bg-slate-50 px-2 py-1 rounded flex items-center gap-1.5"
+					>
+						<div className="w-5 px-0.5">
+							<img src="./notes_slate.svg" className="w-full" />
+						</div>
+						Notes
+					</button>
+					{transaction.ignored ? (
 						<button
 							onClick={() => {
 								updateTransactionIgnored(false);
@@ -145,8 +162,7 @@ const TransactionMenu = ({ transactionId, ignored }) => {
 };
 
 TransactionMenu.propTypes = {
-	transactionId: PropTypes.number,
-	ignored: PropTypes.bool,
+	transaction: PropTypes.object,
 };
 
 export default TransactionMenu;

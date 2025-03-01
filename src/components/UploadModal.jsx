@@ -236,7 +236,7 @@ const UploadModal = () => {
 				<div
 					onClick={onClose}
 					className={`${uploadModalAnimating ? (uploadModalVisible ? "enter" : "exit") : ""}
-			z-[99] overflow-hidden upload-modal top-0 left-0 absolute w-full h-full flex items-center justify-center bg-[rgba(0,0,0,0.25)]`}
+			z-[99] overflow-hidden modal top-0 left-0 absolute w-full h-full flex items-center justify-center bg-[rgba(0,0,0,0.25)]`}
 				>
 					<div
 						onClick={(e) => {

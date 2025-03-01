@@ -92,12 +92,12 @@ body {
 	animation-duration: 0.1s;
 }
 
-.upload-modal.enter {
+.modal.enter {
 	animation-name: fadeInUp;
 	animation-duration: 0.1s;
 }
 
-.upload-modal.exit {
+.modal.exit {
 	animation-name: fadeOutDown;
 	animation-duration: 0.1s;
 }

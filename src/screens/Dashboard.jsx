@@ -1,10 +1,10 @@
 import TransactionTable from "../components/TransactionTable";
 import Navbar from "../components/Navbar";
-import { useState } from "react";
 import { useDataStore } from "../util/dataStore";
 import NotificationBanner from "../components/NotificationBanner";
 import DashboardStats from "../components/DashboardStats";
 import UploadModal from "../components/UploadModal";
+import NotesModal from "../components/NotesModal";
 
 const Dashboard = () => {
 	const { transactions, setTransactions, transactionsLoading } = useDataStore((state) => ({
@@ -12,24 +12,6 @@ const Dashboard = () => {
 		setTransactions: state.setTransactions,
 		transactionsLoading: state.transactionsLoading,
 	}));
-	const [uploadModalVisible, setUploadModalVisible] = useState(false);
-	const [uploadModalAnimating, setUploadModalAnimating] = useState(false);
-
-	const openUploadModal = () => {
-		setUploadModalAnimating(true);
-		setUploadModalVisible(true);
-		setTimeout(() => {
-			setUploadModalAnimating(false);
-		}, 100);
-	};
-
-	const closeUploadModal = () => {
-		setUploadModalAnimating(true);
-		setUploadModalVisible(false);
-		setTimeout(() => {
-			setUploadModalAnimating(false);
-		}, 100);
-	};
 
 	return (
 		<div className="w-screen h-screen flex overflow-hidden relative">
@@ -41,18 +23,11 @@ const Dashboard = () => {
 					setTransactions={setTransactions}
 					transactionsLoading={transactionsLoading}
 					linkToTransactionsPage={true}
-					openUploadModal={openUploadModal}
 				/>
 			</div>
 			<NotificationBanner />
-			<UploadModal
-				modalVisible={uploadModalVisible}
-				setModalVisible={setUploadModalVisible}
-				modalAnimating={uploadModalAnimating}
-				setModalAnimating={setUploadModalAnimating}
-				openUploadModal={openUploadModal}
-				closeUploadModal={closeUploadModal}
-			/>
+			<UploadModal />
+			<NotesModal />
 		</div>
 	);
 };

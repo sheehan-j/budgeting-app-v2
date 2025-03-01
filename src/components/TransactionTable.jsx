@@ -320,7 +320,11 @@ const TransactionTable = ({ transactions, setTransactions, transactionsLoading }
 										{transaction.amount.toFixed(2)}
 									</div>
 									<div className="w-[3%] flex justify-center">
-										<TransactionMenu transactionId={transaction.id} ignored={transaction.ignored} />
+										<TransactionMenu
+											transaction={transaction}
+											transactionId={transaction.id}
+											ignored={transaction.ignored}
+										/>
 									</div>
 								</div>
 							))}
