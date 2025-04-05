@@ -76,7 +76,7 @@ const TransactionMenu = ({ transaction }) => {
 	};
 
 	const onClickSaveMerchant = () => {
-		const matchingTransaction = transactions.find((transaction) => transaction.id === transaction.id);
+		const matchingTransaction = transactions.find((t) => t.id === transaction.id);
 		if (matchingTransaction) {
 			setEditingMerchantSetting({
 				id: -1,
