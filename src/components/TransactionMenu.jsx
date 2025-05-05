@@ -67,7 +67,7 @@ const TransactionMenu = ({ transaction }) => {
 		const success = await deleteTransaction(transaction.id);
 
 		if (success) {
-			const newTransactions = transactions.filter((transaction) => transaction.id !== transaction.id);
+			const newTransactions = transactions.filter((t) => t.id !== transaction.id);
 			setTransactions(newTransactions);
 			setDashboardStats(await getDashboardStats(newTransactions, filters));
 		} else {
