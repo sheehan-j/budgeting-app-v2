@@ -129,20 +129,19 @@ const UploadModal = () => {
 				promises.push(filePromise);
 			}
 
-			// Once all promises are resolved, parse transactions
+			// Wait for all file reading promises to complete
+			const fileContents = await Promise.all(promises);
+
+			// Parse transactions
 			let transactions = [];
-			Promise.all(promises).then((fileContents) => {
-				fileContents.forEach((fileContent, index) => {
-					const parsedTransactions = parseTransactionsFromCSV(
-						fileContent,
-						configurations?.find(
-							(configuration) => configuration.name === stagedFiles[index].configuration
-						),
-						session.user.id,
-						uploadId
-					);
-					transactions.push(...parsedTransactions);
-				});
+			fileContents.forEach((fileContent, index) => {
+				const parsedTransactions = parseTransactionsFromCSV(
+					fileContent,
+					configurations?.find((configuration) => configuration.name === stagedFiles[index].configuration),
+					session.user.id,
+					uploadId
+				);
+				transactions.push(...parsedTransactions);
 			});
 
 			const duplicateResults = await checkForDuplicateTransactions(transactions);
@@ -173,6 +172,7 @@ const UploadModal = () => {
 			await fetchUploads();
 		} catch (error) {
 			setNotification({ message: error.message, type: "error" });
+			console.error(error);
 			setLoading(false);
 			return;
 		}
