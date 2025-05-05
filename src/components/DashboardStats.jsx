@@ -123,9 +123,7 @@ const DashboardStats = () => {
 							)}
 						</div>
 						{dashboardStats?.categories?.length == 0 && (
-							<div className="text-slate-500 opacity-75">
-								No transactions found under the current filter
-							</div>
+							<div className="text-slate-500 opacity-75">No transactions found under current filters</div>
 						)}
 						<div className="flex flex-col">
 							{/* TOP 3 CATEGORIES (ALWAYS DISPLAYED) */}
