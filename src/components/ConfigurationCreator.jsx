@@ -3,7 +3,6 @@ import DisabledConfigurationOptions from "./DisabledConfigurationOptions";
 import ButtonSpinner from "./ButtonSpinner";
 import supabase from "../config/supabaseClient";
 import CSVColNumOption from "./CSVColNumOption";
-import CSVSymbolOption from "./CSVSymbolOption";
 import ErrorMessage from "./ErrorMessage";
 import { useDataStore } from "../util/dataStore";
 
@@ -18,6 +17,7 @@ const ConfigurationCreator = () => {
 	const [activeConfiguration, setActiveConfiguration] = useState(null);
 	const [newConfigurationName, setNewConfigurationName] = useState("");
 	const [newConfigurationError, setNewConfigurationError] = useState(null);
+	const [hasHeader, setHasHeader] = useState(false);
 	const [saveConfigurationErrors, setSaveConfigurationErrors] = useState([]);
 	const [successVisible, setSuccessVisible] = useState(false);
 	const [loading, setLoading] = useState({
@@ -27,13 +27,13 @@ const ConfigurationCreator = () => {
 
 	const emptyConfiguration = {
 		name: null,
-		minusSymbolMeaning: null,
-		plusSymbolMeaning: null,
-		noSymbolMeaning: null,
-		dateColNum: null,
-		amountColNum: null,
 		merchantColNum: null,
-		hasHeader: false,
+		chargesColNum: null,
+		creditsColNum: null,
+		chargesSymbol: "minus",
+		creditsSymbol: "none",
+		dateColNum: null,
+		headerRows: null,
 	};
 
 	useEffect(() => {
@@ -44,7 +44,9 @@ const ConfigurationCreator = () => {
 	const handleClickConfiguration = (configurationName) => {
 		if (Object.values(loading).some((value) => value)) return;
 
-		setActiveConfiguration(configurations?.find((configuration) => configuration.name === configurationName));
+		const target = configurations?.find((configuration) => configuration.name === configurationName);
+		setHasHeader(target.headerRows !== null);
+		setActiveConfiguration(target);
 		setNewConfigurationName("");
 	};
 
@@ -113,24 +115,14 @@ const ConfigurationCreator = () => {
 		if (activeConfiguration.dateColNum === null) errors.push("Date column number cannot be empty.");
 		else if (isNaN(activeConfiguration.dateColNum)) errors.push("Date column number must be a number.");
 
-		if (activeConfiguration.amountColNum === null) errors.push("Amount column number cannot be empty.");
-		if (isNaN(activeConfiguration.amountColNum)) errors.push("Amount column number must be a number.");
+		if (activeConfiguration.chargesColNum === null) errors.push("Merchant column number cannot be empty.");
+		else if (isNaN(activeConfiguration.chargesColNum)) errors.push("Merchant column number must be a number.");
 
-		if (activeConfiguration.merchantColNum === null) errors.push("Merchant column number cannot be empty.");
-		else if (isNaN(activeConfiguration.merchantColNum)) errors.push("Merchant column number must be a number.");
+		if (activeConfiguration.creditsColNum === null) errors.push("Merchant column number cannot be empty.");
+		else if (isNaN(activeConfiguration.creditsColNum)) errors.push("Merchant column number must be a number.");
 
-		const selectedSymbolOptions = [];
-		if (activeConfiguration.minusSymbolMeaning) selectedSymbolOptions.push(activeConfiguration.minusSymbolMeaning);
-		if (activeConfiguration.plusSymbolMeaning) selectedSymbolOptions.push(activeConfiguration.plusSymbolMeaning);
-		if (activeConfiguration.noSymbolMeaning) selectedSymbolOptions.push(activeConfiguration.noSymbolMeaning);
-		if (selectedSymbolOptions.length != 2) {
-			errors.push("Exactly two checkboxes should be selected signifying transactions minus/plus/no symbols.");
-		} else {
-			const credits = selectedSymbolOptions.filter((option) => option === "credit").length;
-			if (credits != 1) errors.push("Exactly one checkbox should be selected for credit transactions.");
-			const charges = selectedSymbolOptions.filter((option) => option === "charge").length;
-			if (charges != 1) errors.push("Exactly one checkbox should be selected for charge transactions.");
-		}
+		if (activeConfiguration.creditsSymbol === activeConfiguration.chargesSymbol)
+			errors.push("Charges and credits cannot have the same symbols.");
 
 		// Check for errors before making Supabase call
 		if (errors.length > 0) {
@@ -240,7 +232,7 @@ const ConfigurationCreator = () => {
 									For date, amount, and merchant, enter the column number corresponding to these
 									fields in your CSV.
 								</div>
-								<div className="flex flex-col gap-3">
+								<div className="flex flex-col gap-5">
 									<CSVColNumOption
 										name={"Date"}
 										value={activeConfiguration?.dateColNum?.toString() || ""}
@@ -248,17 +240,6 @@ const ConfigurationCreator = () => {
 											setActiveConfiguration({
 												...activeConfiguration,
 												dateColNum: e.target.value !== "" ? e.target.value : null,
-											});
-										}}
-									/>
-
-									<CSVColNumOption
-										name={"Amount"}
-										value={activeConfiguration?.amountColNum?.toString() || ""}
-										onChange={(e) => {
-											setActiveConfiguration({
-												...activeConfiguration,
-												amountColNum: e.target.value !== "" ? e.target.value : null,
 											});
 										}}
 									/>
@@ -273,76 +254,96 @@ const ConfigurationCreator = () => {
 											});
 										}}
 									/>
+
+									<div>
+										<CSVColNumOption
+											name={"Charges"}
+											value={activeConfiguration?.chargesColNum?.toString() || ""}
+											onChange={(e) => {
+												setActiveConfiguration({
+													...activeConfiguration,
+													chargesColNum: e.target.value !== "" ? e.target.value : null,
+												});
+											}}
+										/>
+										<div className="mt-2 flex justify-between">
+											<label>{"Do charges have symbols?"}</label>
+											<select
+												className="border border-slate-300 text-sm rounded p-1 bg-white"
+												value={activeConfiguration?.chargesSymbol || ""}
+												onChange={(e) =>
+													setActiveConfiguration({
+														...activeConfiguration,
+														chargesSymbol: e.target.value,
+													})
+												}
+											>
+												<option value="none">No Symbol</option>
+												<option value="minus">{"Minus (-)"}</option>
+												<option value="plus">{"Plus (+)"}</option>
+											</select>
+										</div>
+									</div>
+
+									<div>
+										<CSVColNumOption
+											name={"Credits (often in same column as charges)"}
+											value={activeConfiguration?.creditsColNum?.toString() || ""}
+											onChange={(e) => {
+												setActiveConfiguration({
+													...activeConfiguration,
+													creditsColNum: e.target.value !== "" ? e.target.value : null,
+												});
+											}}
+										/>
+										<div className="mt-2 flex justify-between">
+											<label>{"Do credits have symbols?"}</label>
+											<select
+												className="border border-slate-300 text-sm rounded p-1 bg-white"
+												value={activeConfiguration?.creditsSymbol || ""}
+												onChange={(e) =>
+													setActiveConfiguration({
+														...activeConfiguration,
+														creditsSymbol: e.target.value,
+													})
+												}
+											>
+												<option value="none">No Symbol</option>
+												<option value="minus">{"Minus (-)"}</option>
+												<option value="plus">{"Plus (+)"}</option>
+											</select>
+										</div>
+									</div>
 								</div>
 							</div>
-							<div className="flex justify-between mb-6">
-								<label>{"Does your CSV have a header?"}</label>
-								<input
-									className="accent-cGreen-light text-white bg-white"
-									type="checkbox"
-									checked={activeConfiguration.hasHeader}
-									onChange={(e) => {
-										setActiveConfiguration({
-											...activeConfiguration,
-											hasHeader: e.target.checked,
-										});
-									}}
-								/>
-							</div>
-							<div className="flex flex-col gap-4">
-								<CSVSymbolOption
-									symbolMeaning={activeConfiguration?.minusSymbolMeaning}
-									firstQuestion={"Does your CSV have minus (-) symbols?"}
-									firstOnChange={(e) => {
-										setActiveConfiguration({
-											...activeConfiguration,
-											minusSymbolMeaning: e.target.checked ? "charge" : null,
-										});
-									}}
-									secondQuestion={"What does the minus symbol signify?"}
-									secondOnChange={(e) =>
-										setActiveConfiguration({
-											...activeConfiguration,
-											minusSymbolMeaning: e.target.value,
-										})
-									}
-								/>
-
-								<CSVSymbolOption
-									symbolMeaning={activeConfiguration?.plusSymbolMeaning}
-									firstQuestion={"Does your CSV have plus (+) symbols?"}
-									firstOnChange={(e) => {
-										setActiveConfiguration({
-											...activeConfiguration,
-											plusSymbolMeaning: e.target.checked ? "credit" : null,
-										});
-									}}
-									secondQuestion={"What does the plus symbol signify?"}
-									secondOnChange={(e) =>
-										setActiveConfiguration({
-											...activeConfiguration,
-											plusSymbolMeaning: e.target.value,
-										})
-									}
-								/>
-
-								<CSVSymbolOption
-									symbolMeaning={activeConfiguration?.noSymbolMeaning}
-									firstQuestion={"Does your CSV have transactions without symbols?"}
-									firstOnChange={(e) => {
-										setActiveConfiguration({
-											...activeConfiguration,
-											noSymbolMeaning: e.target.checked ? "credit" : null,
-										});
-									}}
-									secondQuestion={"What does these transactions signify?"}
-									secondOnChange={(e) =>
-										setActiveConfiguration({
-											...activeConfiguration,
-											noSymbolMeaning: e.target.value,
-										})
-									}
-								/>
+							<div className="flex flex-col gap-2 mb-6">
+								<div className="flex justify-between">
+									<label>{"Does your CSV have a header?"}</label>
+									<input
+										className="accent-cGreen-light text-white bg-white"
+										type="checkbox"
+										checked={hasHeader}
+										onChange={(e) => {
+											setHasHeader(e.target.checked);
+											setActiveConfiguration({
+												...activeConfiguration,
+												headerRows: e.target.checked ? 1 : null,
+											});
+										}}
+									/>
+								</div>
+								{hasHeader && (
+									<CSVColNumOption
+										name={"How many rows are in the header? (these rows will be ignored)"}
+										value={activeConfiguration?.headerRows?.toString() || ""}
+										onChange={(e) => {
+											setActiveConfiguration({
+												...activeConfiguration,
+												headerRows: e.target.value !== "" ? e.target.value : null,
+											});
+										}}
+									/>
+								)}
 							</div>
 							<div className={`${saveConfigurationErrors?.length > 0 ? "mt-3" : ""}`}>
 								<ErrorMessage errors={saveConfigurationErrors} />

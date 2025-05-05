@@ -5,8 +5,8 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 
 	const rows = fileContent.split("\n");
 	if (rows[rows.length - 1] === "") rows.pop();
-	if (configuration.hasHeader) rows.shift();
-	rows.forEach((row) => {
+	if (configuration.headerRows) rows.splice(0, configuration.headerRows);
+	rows.forEach((row, rowIndex) => {
 		row = row.replace(", ", ",");
 		const cells = row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
 
@@ -21,39 +21,40 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 			if (cell[0] == '"' && cell[cell.length - 1] == '"') cell = cell.substring(1, cell.length - 1);
 			cell = cell.trim();
 
-			if (index + 1 === configuration.amountColNum) {
+			if (index + 1 === configuration.chargesColNum || index + 1 === configuration.creditsColNum) {
 				if (cell.includes("$")) cell = cell.replace("$", "");
 				cell = cell.replace(/,/g, "");
 
-				let coefficient;
+				let coefficient = null;
 				if (cell.includes("-")) {
-					if (configuration.minusSymbolMeaning) {
-						cell = cell.replace("-", "");
-						if (configuration.minusSymbolMeaning === "charge") coefficient = 1.0;
-						else if (configuration.minusSymbolMeaning === "credit") coefficient = -1.0;
-						else throw Error("Internal error - minusSymbolMeaning is not valid. Please report this.");
-					} else {
-						throw Error(
-							"Encountered unexpected minus symbol in amount column. Please check your configuration."
+					cell = cell.replace("-", "");
+					if (configuration.chargesSymbol === "minus") coefficient = 1.0;
+					else if (configuration.creditsSymbol === "minus") coefficient = -1.0;
+					else
+						throw new Error(
+							`Encountered unexpected minus symbol in column ${
+								index + 1
+							}. Please check your configuration for charges/credits.`
 						);
-					}
 				} else if (cell.includes("+")) {
-					if (configuration.plusSymbolMeaning) {
-						cell = cell.replace("-", "");
-						if (configuration.plusSymbolMeaning === "charge") coefficient = 1.0;
-						else if (configuration.plusSymbolMeaning === "credit") coefficient = -1.0;
-						else throw Error("Internal error - plusSymbolMeaning is not valid. Please report this.");
-					} else {
-						throw Error(
-							"Encountered unexpected plus symbol in amount column. Please check your configuration."
+					cell = cell.replace("+", "");
+					if (configuration.chargesSymbol === "plus") coefficient = 1.0;
+					else if (configuration.creditsSymbol === "plus") coefficient = -1.0;
+					else
+						throw new Error(
+							`Encountered unexpected plus symbol in column ${
+								index + 1
+							}. Please check your configuration charges/credits.`
 						);
-					}
 				} else {
-					if (configuration.noSymbolMeaning) {
-						if (configuration.noSymbolMeaning === "charge") coefficient = 1.0;
-						else if (configuration.noSymbolMeaning === "credit") coefficient = -1.0;
-						else throw Error("Internal error - noSymbolMeaning is not valid. Please report this.");
-					}
+					if (configuration.chargesSymbol === "none") coefficient = 1.0;
+					else if (configuration.creditsSymbol === "none") coefficient = -1.0;
+					else
+						throw new Error(
+							`Encountered unexpected amount without a symbol in column ${
+								index + 1
+							}. Please check your configuration for charges/credits.`
+						);
 				}
 
 				if (coefficient < 0) {
@@ -62,7 +63,17 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 						newTransaction.categoryName = "Credits/Payments";
 					}
 				}
+
 				newTransaction.amount = Math.round((parseFloat(cell) * coefficient + Number.EPSILON) * 100) / 100;
+
+				// If this the amount is invalid and this isn't the last row, throw an error (last rows with invalid info are ignored)
+				if (!newTransaction.amount && rowIndex < rows.length - 1) {
+					throw new Error(
+						`No transaction amount found in row ${
+							rowIndex + 1
+						}. Please check your configuration for charges/credits.`
+					);
+				}
 			} else if (index + 1 === configuration.dateColNum) {
 				const date = new Date(cell);
 				newTransaction.date = date.toLocaleDateString("en-US");
@@ -84,6 +95,11 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 		});
 		transactions.push(newTransaction);
 	});
+
+	// Remove the last transaction from the list if its invalid in case the CSV was formatted weird
+	const transactionCount = transactions.length;
+	if (transactionCount > 0 && !transactions[transactionCount - 1].amount) transactions.pop();
+
 	return transactions;
 };
 
