@@ -1,3 +1,4 @@
+import { config } from "@fortawesome/fontawesome-svg-core";
 import { getTransactions } from "./supabaseQueries";
 
 export const parseTransactionsFromCSV = (fileContent, configuration, userId, uploadId) => {
@@ -22,39 +23,51 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 			cell = cell.trim();
 
 			if (index + 1 === configuration.chargesColNum || index + 1 === configuration.creditsColNum) {
-				if (cell.includes("$")) cell = cell.replace("$", "");
-				cell = cell.replace(/,/g, "");
+				// Only set the amount if an amount wasn't already set
+				// If the amount is already set, that means either the charge or credit column (whichever came first in the column order)
+				// was already calculated, and this column (logically) should be empty
+				if (newTransaction.amount || cell === "") return;
 
-				let coefficient = null;
-				if (cell.includes("-")) {
-					cell = cell.replace("-", "");
-					if (configuration.chargesSymbol === "minus") coefficient = 1.0;
-					else if (configuration.creditsSymbol === "minus") coefficient = -1.0;
-					else
-						throw new Error(
-							`Encountered unexpected minus symbol in column ${
-								index + 1
-							}. Please check your configuration for charges/credits.`
-						);
-				} else if (cell.includes("+")) {
-					cell = cell.replace("+", "");
-					if (configuration.chargesSymbol === "plus") coefficient = 1.0;
-					else if (configuration.creditsSymbol === "plus") coefficient = -1.0;
-					else
-						throw new Error(
-							`Encountered unexpected plus symbol in column ${
-								index + 1
-							}. Please check your configuration charges/credits.`
-						);
+				cell = cell.replace(/[^0-9.+-]/g, "");
+
+				let coefficient = 0;
+				if (configuration.chargesColNum != configuration.creditsColNum) {
+					// CASE 1: Charges and credits have different column numbers and the symbols do not matter
+					cell = cell.replace(/[^0-9.]/g, "");
+					if (index + 1 === configuration.chargesColNum) coefficient = 1.0;
+					else coefficient = -1.0;
 				} else {
-					if (configuration.chargesSymbol === "none") coefficient = 1.0;
-					else if (configuration.creditsSymbol === "none") coefficient = -1.0;
-					else
-						throw new Error(
-							`Encountered unexpected amount without a symbol in column ${
-								index + 1
-							}. Please check your configuration for charges/credits.`
-						);
+					// CASE 2: Charges and credits have the same column numbers and the symbols DO matter
+					if (cell.includes("-")) {
+						cell = cell.replace("-", "");
+						if (configuration.chargesSymbol === "minus") coefficient = 1.0;
+						else if (configuration.creditsSymbol === "minus") coefficient = -1.0;
+						else
+							throw new Error(
+								`Encountered unexpected minus symbol in column ${
+									index + 1
+								}. Please check your configuration for charges/credits.`
+							);
+					} else if (cell.includes("+")) {
+						cell = cell.replace("+", "");
+						if (configuration.chargesSymbol === "plus") coefficient = 1.0;
+						else if (configuration.creditsSymbol === "plus") coefficient = -1.0;
+						else
+							throw new Error(
+								`Encountered unexpected plus symbol in column ${
+									index + 1
+								}. Please check your configuration charges/credits.`
+							);
+					} else {
+						if (configuration.chargesSymbol === "none") coefficient = 1.0;
+						else if (configuration.creditsSymbol === "none") coefficient = -1.0;
+						else
+							throw new Error(
+								`Encountered unexpected amount without a symbol in column ${
+									index + 1
+								}. Please check your configuration for charges/credits.`
+							);
+					}
 				}
 
 				if (coefficient < 0) {
@@ -65,15 +78,6 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 				}
 
 				newTransaction.amount = Math.round((parseFloat(cell) * coefficient + Number.EPSILON) * 100) / 100;
-
-				// If this the amount is invalid and this isn't the last row, throw an error (last rows with invalid info are ignored)
-				if (!newTransaction.amount && rowIndex < rows.length - 1) {
-					throw new Error(
-						`No transaction amount found in row ${
-							rowIndex + 1
-						}. Please check your configuration for charges/credits.`
-					);
-				}
 			} else if (index + 1 === configuration.dateColNum) {
 				const date = new Date(cell);
 				newTransaction.date = date.toLocaleDateString("en-US");
@@ -93,6 +97,15 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 				}
 			}
 		});
+
+		// If this the amount is invalid and this isn't the last row, throw an error (last rows with invalid info are ignored)
+		if (!newTransaction.amount && rowIndex < rows.length - 1) {
+			throw new Error(
+				`No transaction amount found in row ${
+					rowIndex + 1
+				}. Please check your configuration for charges/credits.`
+			);
+		}
 		transactions.push(newTransaction);
 	});
 
