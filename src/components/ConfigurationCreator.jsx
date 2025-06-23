@@ -121,8 +121,11 @@ const ConfigurationCreator = () => {
 		if (activeConfiguration.creditsColNum === null) errors.push("Merchant column number cannot be empty.");
 		else if (isNaN(activeConfiguration.creditsColNum)) errors.push("Merchant column number must be a number.");
 
-		if (activeConfiguration.creditsSymbol === activeConfiguration.chargesSymbol)
-			errors.push("Charges and credits cannot have the same symbols.");
+		if (
+			activeConfiguration.creditsColNum === activeConfiguration.chargesColNum &&
+			activeConfiguration.creditsSymbol === activeConfiguration.chargesSymbol
+		)
+			errors.push("Charges and credits cannot have the same column number AND the same symbol.");
 
 		// Check for errors before making Supabase call
 		if (errors.length > 0) {
