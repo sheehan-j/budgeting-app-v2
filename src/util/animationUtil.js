@@ -30,7 +30,7 @@ export const openCategoryMenu = (
 	const spaceBelow = tableRect.bottom - buttonRect.bottom;
 	const spaceAbove = buttonRect.top - tableRect.top;
 
-	if (spaceBelow < 300 && spaceAbove > spaceBelow) {
+	if (spaceBelow < 450 && spaceAbove > spaceBelow) {
 		setMenuDirectionDown(false);
 	} else {
 		setMenuDirectionDown(true);
