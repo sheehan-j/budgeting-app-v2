@@ -18,6 +18,22 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 			tempInsertId: crypto.randomUUID(), // Makes it easier to track which transactions are duplicates
 			uploadId,
 		};
+
+		let transactionTypeCoefficient = null;
+		if (configuration.typeColNum) {
+			const transactionType = cells[configuration.typeColNum - 1];
+
+			if (transactionType.toLowerCase() === configuration.chargesLabel.toLowerCase()) {
+				transactionTypeCoefficient = 1.0;
+			} else if (transactionType.toLowerCase() === configuration.creditsLabel.toLowerCase()) {
+				transactionTypeCoefficient = -1.0;
+			} else {
+				throw new Error(
+					`Encountered unexpected transaction type label "${transactionType}", expecting either "${configuration.chargesLabel}" or "${configuration.creditsLabel}"`
+				);
+			}
+		}
+
 		cells.forEach((cell, index) => {
 			if (cell[0] == '"' && cell[cell.length - 1] == '"') cell = cell.substring(1, cell.length - 1);
 			cell = cell.trim();
@@ -31,42 +47,49 @@ export const parseTransactionsFromCSV = (fileContent, configuration, userId, upl
 				cell = cell.replace(/[^0-9.+-]/g, "");
 
 				let coefficient = 0;
-				if (configuration.chargesColNum != configuration.creditsColNum) {
-					// CASE 1: Charges and credits have different column numbers and the symbols do not matter
+
+				if (transactionTypeCoefficient) {
+					// If these transactions are labeled instead of using symbols, just remove any possible symbols and then allow subsequent logic to compute the amount
 					cell = cell.replace(/[^0-9.]/g, "");
-					if (index + 1 === configuration.chargesColNum) coefficient = 1.0;
-					else coefficient = -1.0;
+					coefficient = transactionTypeCoefficient;
 				} else {
-					// CASE 2: Charges and credits have the same column numbers and the symbols DO matter
-					if (cell.includes("-")) {
-						cell = cell.replace("-", "");
-						if (configuration.chargesSymbol === "minus") coefficient = 1.0;
-						else if (configuration.creditsSymbol === "minus") coefficient = -1.0;
-						else
-							throw new Error(
-								`Encountered unexpected minus symbol in column ${
-									index + 1
-								}. Please check your configuration for charges/credits.`
-							);
-					} else if (cell.includes("+")) {
-						cell = cell.replace("+", "");
-						if (configuration.chargesSymbol === "plus") coefficient = 1.0;
-						else if (configuration.creditsSymbol === "plus") coefficient = -1.0;
-						else
-							throw new Error(
-								`Encountered unexpected plus symbol in column ${
-									index + 1
-								}. Please check your configuration charges/credits.`
-							);
+					if (configuration.chargesColNum != configuration.creditsColNum) {
+						// CASE 1: Charges and credits have different column numbers and the symbols do not matter
+						cell = cell.replace(/[^0-9.]/g, "");
+						if (index + 1 === configuration.chargesColNum) coefficient = 1.0;
+						else coefficient = -1.0;
 					} else {
-						if (configuration.chargesSymbol === "none") coefficient = 1.0;
-						else if (configuration.creditsSymbol === "none") coefficient = -1.0;
-						else
-							throw new Error(
-								`Encountered unexpected amount without a symbol in column ${
-									index + 1
-								}. Please check your configuration for charges/credits.`
-							);
+						// CASE 2: Charges and credits have the same column numbers and the symbols DO matter
+						if (cell.includes("-")) {
+							cell = cell.replace("-", "");
+							if (configuration.chargesSymbol === "minus") coefficient = 1.0;
+							else if (configuration.creditsSymbol === "minus") coefficient = -1.0;
+							else
+								throw new Error(
+									`Encountered unexpected minus symbol in column ${
+										index + 1
+									}. Please check your configuration for charges/credits.`
+								);
+						} else if (cell.includes("+")) {
+							cell = cell.replace("+", "");
+							if (configuration.chargesSymbol === "plus") coefficient = 1.0;
+							else if (configuration.creditsSymbol === "plus") coefficient = -1.0;
+							else
+								throw new Error(
+									`Encountered unexpected plus symbol in column ${
+										index + 1
+									}. Please check your configuration charges/credits.`
+								);
+						} else {
+							if (configuration.chargesSymbol === "none") coefficient = 1.0;
+							else if (configuration.creditsSymbol === "none") coefficient = -1.0;
+							else
+								throw new Error(
+									`Encountered unexpected amount without a symbol in column ${
+										index + 1
+									}. Please check your configuration for charges/credits.`
+								);
+						}
 					}
 				}
 
