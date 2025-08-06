@@ -18,6 +18,7 @@ const ConfigurationCreator = () => {
 	const [newConfigurationName, setNewConfigurationName] = useState("");
 	const [newConfigurationError, setNewConfigurationError] = useState(null);
 	const [hasHeader, setHasHeader] = useState(false);
+	const [hasTypeColumn, setHasTypeColumn] = useState(false);
 	const [saveConfigurationErrors, setSaveConfigurationErrors] = useState([]);
 	const [successVisible, setSuccessVisible] = useState(false);
 	const [loading, setLoading] = useState({
@@ -33,6 +34,9 @@ const ConfigurationCreator = () => {
 		chargesSymbol: "minus",
 		creditsSymbol: "none",
 		dateColNum: null,
+		typeColNum: null,
+		chargesLabel: null,
+		creditsLabel: null,
 		headerRows: null,
 	};
 
@@ -45,7 +49,9 @@ const ConfigurationCreator = () => {
 		if (Object.values(loading).some((value) => value)) return;
 
 		const target = configurations?.find((configuration) => configuration.name === configurationName);
+
 		setHasHeader(target.headerRows !== null);
+		setHasTypeColumn(target.typeColNum !== null);
 		setActiveConfiguration(target);
 		setNewConfigurationName("");
 	};
@@ -115,17 +121,30 @@ const ConfigurationCreator = () => {
 		if (activeConfiguration.dateColNum === null) errors.push("Date column number cannot be empty.");
 		else if (isNaN(activeConfiguration.dateColNum)) errors.push("Date column number must be a number.");
 
-		if (activeConfiguration.chargesColNum === null) errors.push("Merchant column number cannot be empty.");
-		else if (isNaN(activeConfiguration.chargesColNum)) errors.push("Merchant column number must be a number.");
+		if (activeConfiguration.merchantColNum === null) errors.push("Merchant column number cannot be empty.");
+		else if (isNaN(activeConfiguration.merchantColNum)) errors.push("Merchant column number must be a number.");
 
-		if (activeConfiguration.creditsColNum === null) errors.push("Merchant column number cannot be empty.");
-		else if (isNaN(activeConfiguration.creditsColNum)) errors.push("Merchant column number must be a number.");
+		if (!hasTypeColumn) {
+			if (activeConfiguration.chargesColNum === null) errors.push("Charges column number cannot be empty.");
+			else if (isNaN(activeConfiguration.chargesColNum)) errors.push("Charges column number must be a number.");
 
-		if (
-			activeConfiguration.creditsColNum === activeConfiguration.chargesColNum &&
-			activeConfiguration.creditsSymbol === activeConfiguration.chargesSymbol
-		)
-			errors.push("Charges and credits cannot have the same column number AND the same symbol.");
+			if (activeConfiguration.creditsColNum === null) errors.push("Credits column number cannot be empty.");
+			else if (isNaN(activeConfiguration.creditsColNum)) errors.push("Credits column number must be a number.");
+
+			if (
+				activeConfiguration.creditsColNum === activeConfiguration.chargesColNum &&
+				activeConfiguration.creditsSymbol === activeConfiguration.chargesSymbol
+			)
+				errors.push("Charges and credits cannot have the same column number AND the same symbol.");
+		} else {
+			if (activeConfiguration.typeColNum === null) errors.push("Type  column number cannot be empty.");
+			else if (isNaN(activeConfiguration.typeColNum)) errors.push("Type  column number must be a number.");
+
+			if (activeConfiguration.chargesLabel === null)
+				errors.push("Label for money leaving account cannot be empty.");
+			if (activeConfiguration.creditsLabel === null)
+				errors.push("Label for money added to account cannot be empty.");
+		}
 
 		// Check for errors before making Supabase call
 		if (errors.length > 0) {
@@ -134,9 +153,20 @@ const ConfigurationCreator = () => {
 			return;
 		}
 
-		const { error } = await supabase
-			.from("configurations")
-			.upsert({ ...activeConfiguration, userId: session.user.id });
+		// Nullify either the charge/credit symbols or the type col num based on the checkbox selection
+		const configurationPayload = { ...activeConfiguration, userId: session.user.id };
+		if (hasTypeColumn) {
+			configurationPayload.chargesSymbol = null;
+			configurationPayload.creditsSymbol = null;
+		} else {
+			configurationPayload.typeColNum = null;
+			configurationPayload.chargesLabel = null;
+			configurationPayload.creditsLabel = null;
+		}
+
+		console.log(configurationPayload);
+
+		const { error } = await supabase.from("configurations").upsert(configurationPayload);
 		if (error) {
 			setSaveConfigurationErrors(["Could not save configuration."]);
 			return;
@@ -232,8 +262,7 @@ const ConfigurationCreator = () => {
 							</div>
 							<div id="configOptionsContainer" className="mb-6">
 								<div className="text-slate-500 text-xs mb-1 font-light italic">
-									For date, amount, and merchant, enter the column number corresponding to these
-									fields in your CSV.
+									{`In fields relating to "Column #", enter teh column number corresponding to these fields in your CSV.`}
 								</div>
 								<div className="flex flex-col gap-5">
 									<CSVColNumOption
@@ -247,6 +276,8 @@ const ConfigurationCreator = () => {
 										}}
 									/>
 
+									<div className="w-100 h-[1px] bg-slate-300"></div>
+
 									<CSVColNumOption
 										name={"Merchant"}
 										value={activeConfiguration?.merchantColNum?.toString() || ""}
@@ -257,6 +288,73 @@ const ConfigurationCreator = () => {
 											});
 										}}
 									/>
+
+									<div className="w-100 h-[1px] bg-slate-300"></div>
+
+									<div className="flex flex-col gap-4">
+										<div className="flex justify-between">
+											<label>
+												{"Does your CSV have a dedicated column for the transaction type?"}
+											</label>
+											<input
+												className="accent-cGreen-light text-white bg-white"
+												type="checkbox"
+												checked={hasTypeColumn}
+												onChange={(e) => {
+													setHasTypeColumn(e.target.checked);
+												}}
+											/>
+										</div>
+
+										{hasTypeColumn && (
+											<>
+												<CSVColNumOption
+													name={"Type Column #"}
+													value={activeConfiguration?.typeColNum?.toString() || ""}
+													onChange={(e) => {
+														setActiveConfiguration({
+															...activeConfiguration,
+															typeColNum: e.target.value !== "" ? e.target.value : null,
+														});
+													}}
+												/>
+
+												<div className="text-slate-500 text-xs mb-1 font-light italic">
+													{
+														"For the following two fields, enter the text your CSV uses to label the type of a transaction:"
+													}
+												</div>
+
+												<CSVColNumOption
+													name={
+														"Label for money leaving your account (e.g. Debit, Withdrawal, Charge)"
+													}
+													value={activeConfiguration?.chargesLabel || ""}
+													onChange={(e) => {
+														setActiveConfiguration({
+															...activeConfiguration,
+															chargesLabel: e.target.value !== "" ? e.target.value : null,
+														});
+													}}
+												/>
+
+												<CSVColNumOption
+													name={
+														"Label for money added to your account (e.g. Credit, Deposit)"
+													}
+													value={activeConfiguration?.creditsLabel || ""}
+													onChange={(e) => {
+														setActiveConfiguration({
+															...activeConfiguration,
+															creditsLabel: e.target.value !== "" ? e.target.value : null,
+														});
+													}}
+												/>
+											</>
+										)}
+									</div>
+
+									<div className="w-100 h-[1px] bg-slate-300"></div>
 
 									<div>
 										<CSVColNumOption
@@ -269,24 +367,28 @@ const ConfigurationCreator = () => {
 												});
 											}}
 										/>
-										<div className="mt-2 flex justify-between">
-											<label>{"Do charges have symbols?"}</label>
-											<select
-												className="border border-slate-300 text-sm rounded p-1 bg-white"
-												value={activeConfiguration?.chargesSymbol || ""}
-												onChange={(e) =>
-													setActiveConfiguration({
-														...activeConfiguration,
-														chargesSymbol: e.target.value,
-													})
-												}
-											>
-												<option value="none">No Symbol</option>
-												<option value="minus">{"Minus (-)"}</option>
-												<option value="plus">{"Plus (+)"}</option>
-											</select>
-										</div>
+										{!hasTypeColumn && (
+											<div className="mt-2 flex justify-between items-center">
+												<label>{"Do charges have symbols?"}</label>
+												<select
+													className="border border-slate-300 text-sm rounded p-1 bg-white"
+													value={activeConfiguration?.chargesSymbol || ""}
+													onChange={(e) =>
+														setActiveConfiguration({
+															...activeConfiguration,
+															chargesSymbol: e.target.value,
+														})
+													}
+												>
+													<option value="none">No Symbol</option>
+													<option value="minus">{"Minus (-)"}</option>
+													<option value="plus">{"Plus (+)"}</option>
+												</select>
+											</div>
+										)}
 									</div>
+
+									<div className="w-100 h-[1px] bg-slate-300"></div>
 
 									<div>
 										<CSVColNumOption
@@ -299,24 +401,28 @@ const ConfigurationCreator = () => {
 												});
 											}}
 										/>
-										<div className="mt-2 flex justify-between">
-											<label>{"Do credits have symbols?"}</label>
-											<select
-												className="border border-slate-300 text-sm rounded p-1 bg-white"
-												value={activeConfiguration?.creditsSymbol || ""}
-												onChange={(e) =>
-													setActiveConfiguration({
-														...activeConfiguration,
-														creditsSymbol: e.target.value,
-													})
-												}
-											>
-												<option value="none">No Symbol</option>
-												<option value="minus">{"Minus (-)"}</option>
-												<option value="plus">{"Plus (+)"}</option>
-											</select>
-										</div>
+										{!hasTypeColumn && (
+											<div className="mt-2 flex justify-between">
+												<label>{"Do credits have symbols?"}</label>
+												<select
+													className="border border-slate-300 text-sm rounded p-1 bg-white"
+													value={activeConfiguration?.creditsSymbol || ""}
+													onChange={(e) =>
+														setActiveConfiguration({
+															...activeConfiguration,
+															creditsSymbol: e.target.value,
+														})
+													}
+												>
+													<option value="none">No Symbol</option>
+													<option value="minus">{"Minus (-)"}</option>
+													<option value="plus">{"Plus (+)"}</option>
+												</select>
+											</div>
+										)}
 									</div>
+
+									<div className="w-100 h-[1px] bg-slate-300"></div>
 								</div>
 							</div>
 							<div className="flex flex-col gap-2 mb-6">
