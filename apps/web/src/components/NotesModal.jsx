@@ -1,7 +1,7 @@
 import { useDataStore } from "../util/dataStore";
 import { useAnimationStore } from "../util/animationStore";
 import { useState, useEffect } from "react";
-import { updateTransactionNotes, getTransactions } from "../util/supabaseQueries";
+import { updateTransactions, getTransactions } from "../util/supabaseQueries";
 import ButtonSpinner from "./ButtonSpinner";
 
 const NotesModal = () => {
@@ -32,11 +32,14 @@ const NotesModal = () => {
 	};
 
 	const save = async () => {
-		if (loading || !editingNotesTransaction) return;
+		if (loading) return;
 		setLoading(true);
 
+		let updatedTransaction = { ...editingNotesTransaction, notes: notes };
+		delete updatedTransaction.buttonRef;
+
 		try {
-			const success = await updateTransactionNotes(editingNotesTransaction.id, notes);
+			const success = await updateTransactions(updatedTransaction);
 			if (!success) throw new Error();
 			setNotification({ type: "success", message: "Notes saved successfully." });
 			close();

@@ -31,6 +31,7 @@ const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 			categoryName
 		);
 
+		// If the update was successful, simply update the current set of local transactions with the new categories
 		if (success) await onSuccess(localTransactions.map((t) => (t.selected ? { ...t, categoryName } : t)));
 		else setNotification({ type: "error", message: "Could not update transaction(s)." });
 	};
@@ -42,6 +43,7 @@ const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 			ignored
 		);
 
+		// If the update was successful, simply update the current set of local transactions with the new ignored statuses
 		if (success) await onSuccess(localTransactions.map((t) => (t.selected ? { ...t, ignored } : t)));
 		else setNotification({ type: "error", message: "Could not update transaction(s)." });
 	};
@@ -50,6 +52,7 @@ const BulkActions = ({ localTransactions, setLocalTransactions }) => {
 		closeBulkActionsMenu();
 		const success = await deleteTransactions(localTransactions.filter((t) => t.selected));
 
+		// If the update was successful, simply update the current set of local transactions with the deleted transactions removed
 		if (success) await onSuccess(localTransactions.filter((t) => !t.selected));
 		else setNotification({ type: "error", message: "Could not update transaction(s)." });
 	};
