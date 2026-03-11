@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { db } from "../db/index.js";
+import { pool } from "../db/index.js";
 
 const healthRoutes = new Hono();
 
@@ -9,7 +9,7 @@ healthRoutes.get("/", (c) => {
 
 healthRoutes.get("/db", async (c) => {
   try {
-    const result = await db.query("SELECT NOW() AS now");
+    const result = await pool.query("SELECT NOW() AS now");
     return c.json({
       ok: true,
       dbTime: result.rows[0].now,
@@ -21,3 +21,4 @@ healthRoutes.get("/db", async (c) => {
 });
 
 export default healthRoutes;
+

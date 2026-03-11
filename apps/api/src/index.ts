@@ -2,7 +2,12 @@ import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import healthRoutes from "./routes/health";
+import { startupBanner } from "./startupBanner.js";
+import budgetsRoutes from "./routes/budgetsRoutes.js";
+import categoriesRoutes from "./routes/categoriesRoutes.js";
+import healthRoutes from "./routes/healthRoutes.js";
+import merchantSettingsRoutes from "./routes/merchantSettingsRoutes.js";
+import transactionsRoutes from "./routes/transactionsRoutes.js";
 
 const app = new Hono();
 
@@ -14,10 +19,16 @@ app.use(
 );
 
 app.route("/health", healthRoutes);
+app.route("/transactions", transactionsRoutes);
+app.route("/categories", categoriesRoutes);
+app.route("/merchants", merchantSettingsRoutes);
+app.route("/budgets", budgetsRoutes);
 
+startupBanner.forEach((line) => console.log(line));
 const port = Number(process.env.PORT) || 3001;
 console.log(`Server running on http://localhost:${port}`);
 serve({
 	fetch: app.fetch,
 	port,
 });
+

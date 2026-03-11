@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useDataStore } from "../util/dataStore";
 import MerchantSettingsItem from "./MerchantSettingsItem";
 import MerchantSettingsItemCreate from "./MerchantSettingsItemCreate";
-import { getTransactions, updateTransactions } from "../util/supabaseQueries";
+import { getTransactions, setTransactionCategories } from "../util/supabaseQueries";
 import { checkForSavedMerchants } from "../util/transactionUtil";
 import { getDashboardStats } from "../util/statsUtil";
 import ButtonSpinner from "./ButtonSpinner";
@@ -51,9 +51,30 @@ const MerchantSettings = () => {
 		if (Object.values(loading).some((value) => value)) return;
 
 		setLoading({ ...loading, apply: true });
-		let allTransactions = await getTransactions();
-		allTransactions = checkForSavedMerchants(allTransactions, merchantSettings);
-		const success = await updateTransactions(allTransactions);
+		const allTransactions = await getTransactions();
+		const originalCategoriesById = new Map(allTransactions.map((transaction) => [transaction.id, transaction.categoryName]));
+		const updatedTransactions = checkForSavedMerchants(
+			allTransactions.map((transaction) => ({ ...transaction })),
+			merchantSettings
+		);
+		const changedTransactions = updatedTransactions.filter(
+			(transaction) => originalCategoriesById.get(transaction.id) !== transaction.categoryName
+		);
+
+		const changedTransactionsByCategory = changedTransactions.reduce((groups, transaction) => {
+			if (!groups[transaction.categoryName]) groups[transaction.categoryName] = [];
+			groups[transaction.categoryName].push(transaction);
+			return groups;
+		}, {});
+
+		let success = true;
+		for (const [categoryName, transactions] of Object.entries(changedTransactionsByCategory)) {
+			const updated = await setTransactionCategories(transactions, categoryName);
+			if (!updated) {
+				success = false;
+				break;
+			}
+		}
 
 		if (!success) {
 			setLoading({ ...loading, apply: false });
@@ -61,8 +82,8 @@ const MerchantSettings = () => {
 			return;
 		}
 
-		setTransactions(allTransactions);
-		setDashboardStats(await getDashboardStats(allTransactions, filters));
+		setTransactions(updatedTransactions);
+		setDashboardStats(await getDashboardStats(updatedTransactions, filters));
 		setNotification({
 			type: "success",
 			message: "Successfully applied merchant settings to existing transactions.",
@@ -87,15 +108,6 @@ const MerchantSettings = () => {
 						</div>
 					</div>
 				</div>
-				{/* <div className="w-full bg-cGreen-lighter border border-cGreen p-3 rounded-lg mb-3">
-					<span className="font-semibold">NOTE:</span> One or more of your saved merchants is{" "}
-					<span className="underline">contained</span> within another merchant. This may cause unexpected
-					categorizations of your transactions{" "}
-					{
-						"(e.g. if 'contains KROGER' is added after 'contains KROGER FUEL', all transactions containing KROGER FUEL will be categorized according to 'contains KROGER'). "
-					}
-					You should review your saved merchants and ensure they work as you intend.
-				</div> */}
 				<div className="flex flex-col gap-3">
 					{merchantSettings?.length === 0 && editingMerchantSetting?.id !== -1 && (
 						<div className="w-full border border-slate-300 rounded flex justify-center items-center py-3">
