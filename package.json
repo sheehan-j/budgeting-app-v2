@@ -1,0 +1,17 @@
+{
+	"name": "budgeting-app-v2",
+	"private": true,
+	"workspaces": [
+		"apps/web",
+		"apps/api"
+	],
+	"scripts": {
+		"dev:web": "npm --workspace apps/web run dev",
+		"dev:api": "npm --workspace apps/api run dev",
+		"build:web": "npm --workspace apps/web run build",
+		"build:api": "npm --workspace apps/api run build",
+		"build": "npm run build:web && npm run build:api",
+		"start:api": "npm --workspace apps/api run start",
+		"lint:web": "npm --workspace apps/web run lint"
+	}
+}
