@@ -1,6 +1,6 @@
 import { getBudgetRows, replaceBudgetRows } from "../repositories/budgetsRepository.js";
 import { getCategoriesRows } from "../repositories/categoriesRepository.js";
-import { getTransactionsRows } from "../repositories/transactionsRepository.js";
+import { getNormalizedTransactions } from "./transactionsShared.js";
 import type { BudgetUpdateInput, Budget, CategoryBudget } from "../types/budgetsTypes.js";
 import { ignoredCategories, nonEditableBudgets } from "../constants/categories.js";
 
@@ -17,17 +17,13 @@ const getCategoricalSpending = (transactions: { categoryName: string; amount: nu
 };
 
 export const getBudgets = async ({ month, year, userId }: { month: number; year: number; userId: string }) => {
-	const [categoryRows, budgetRows, transactionRows] = await Promise.all([
+	const [categoryRows, budgetRows, transactions] = await Promise.all([
 		getCategoriesRows(),
 		getBudgetRows(userId),
-		getTransactionsRows({ userId, month, year }),
+		getNormalizedTransactions({ userId, month, year }),
 	]);
 
-	const normalizedTransactions = transactionRows.map((transaction) => ({
-		...transaction,
-		amount: Number(transaction.amount),
-	}));
-	const categoricalSpending = getCategoricalSpending(normalizedTransactions);
+	const categoricalSpending = getCategoricalSpending(transactions);
 
 	// Iterate through each category, find the matching budget to get its limit, pull spending from categoricalSpending,
 	// and keep running limit to get total budget limit
