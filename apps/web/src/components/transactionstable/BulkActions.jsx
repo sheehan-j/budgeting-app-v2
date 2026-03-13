@@ -1,26 +1,28 @@
-import { useState } from "react";
-import { useAnimationStore } from "../../util/animationStore";
+import { useEffect, useRef, useState } from "react";
 import { useDataStore } from "../../util/dataStore";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faList } from "@fortawesome/free-solid-svg-icons";
 import { useUpdateTransactionsCategoryMutation } from "../../mutations/useUpdateTransactionsCategoryMutation";
 import { useUpdateTransactionsIgnoredMutation } from "../../mutations/useUpdateTransactionsIgnoredMutation";
 import { useDeleteTransactionsMutation } from "../../mutations/useDeleteTransactionsMutation";
+import { useAnimatedPresence } from "../../util/useAnimatedPresence";
+import { useClickOutside } from "../../util/useClickOutside";
 
 import PropTypes from "prop-types";
 
 const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactionIds }) => {
-	const { bulkActionsMenuVisible, bulkActionsMenuAnimating, openBulkActionsMenu, closeBulkActionsMenu } =
-		useAnimationStore((state) => ({
-			bulkActionsMenuVisible: state.bulkActionsMenuVisible,
-			bulkActionsMenuAnimating: state.bulkActionsMenuAnimating,
-			openBulkActionsMenu: state.openBulkActionsMenu,
-			closeBulkActionsMenu: state.closeBulkActionsMenu,
-		}));
 	const { setNotification } = useDataStore((state) => ({
 		setNotification: state.setNotification,
 	}));
 	const [slideMenu, setSlideMenu] = useState(false);
+	const menuRef = useRef(null);
+	const { isOpen, isMounted, animationClass, close, closeAndWait, toggle, onAnimationEnd } = useAnimatedPresence();
+
+	useClickOutside(menuRef, close, isMounted);
+
+	useEffect(() => {
+		if (!isOpen) setSlideMenu(false);
+	}, [isOpen]);
 
 	const updateTransactionsCategoryMutation = useUpdateTransactionsCategoryMutation();
 	const updateTransactionsIgnoredMutation = useUpdateTransactionsIgnoredMutation();
@@ -29,7 +31,7 @@ const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactio
 	const onClickCategory = async (categoryName) => {
 		if (updateTransactionsCategoryMutation.isPending) return;
 
-		await closeBulkActionsMenu();
+		await closeAndWait();
 
 		updateTransactionsCategoryMutation.mutate(
 			{
@@ -50,7 +52,7 @@ const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactio
 	const onUpdateIgnored = async (ignored) => {
 		if (updateTransactionsIgnoredMutation.isPending) return;
 
-		await closeBulkActionsMenu();
+		await closeAndWait();
 
 		updateTransactionsIgnoredMutation.mutate(
 			{
@@ -71,7 +73,7 @@ const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactio
 	const onDelete = async () => {
 		if (deleteTransactionsMutation.isPending) return;
 
-		await closeBulkActionsMenu();
+		await closeAndWait();
 
 		deleteTransactionsMutation.mutate(selectedTransactionIds, {
 			onSuccess: () => {
@@ -87,20 +89,19 @@ const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactio
 	};
 
 	return (
-		<div className="bulk-actions-menu w-full relative flex items-center justify-start">
+		<div ref={menuRef} className="bulk-actions-menu w-full relative flex items-center justify-start">
 			<div className=" w-full">
 				<button
-					onClick={bulkActionsMenuVisible ? closeBulkActionsMenu : openBulkActionsMenu}
+					onClick={toggle}
 					className=" relative font-normal text-slate-600 bg-cGreen-lighter hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-1 px-2"
 				>
 					Bulk Actions
 				</button>
 			</div>
-			{(bulkActionsMenuVisible || bulkActionsMenuAnimating) && (
+			{isMounted && (
 				<div
-					className={`${
-						bulkActionsMenuAnimating ? (bulkActionsMenuVisible ? "enter" : "exit") : ""
-					}  dropdown-down flex flex-col overflow-hidden w-[12rem] drop-shadow-sm absolute z-[99] left-0 top-[120%] bg-white border border-slate-200 rounded-lg`}
+					onAnimationEnd={onAnimationEnd}
+					className={`${animationClass} dropdown-down flex flex-col overflow-hidden w-[12rem] drop-shadow-sm absolute z-[99] left-0 top-[120%] bg-white border border-slate-200 rounded-lg`}
 				>
 					<div
 						className="flex w-[200%] transition-[transform] duration-200"
@@ -143,7 +144,7 @@ const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactio
 								<div className=" flex flex-col gap-1 px-2 py-1.5">
 									<button
 										onClick={() => setSlideMenu(false)}
-										className="bulk-actions-button w-4 hover:bg-slate-50 rounded"
+										className="w-4 hover:bg-slate-50 rounded"
 									>
 										<img src="./back.svg" className=" w-full" />
 									</button>

@@ -1,47 +1,30 @@
 import PropTypes from "prop-types";
-import { useAnimationStore } from "../../util/animationStore";
+import { useRef } from "react";
 import { useDataStore } from "../../util/dataStore";
 import { useUpdateTransactionsIgnoredMutation } from "../../mutations/useUpdateTransactionsIgnoredMutation";
 import { useDeleteTransactionsMutation } from "../../mutations/useDeleteTransactionsMutation";
-import { Link } from "react-router-dom";
+import { useAnimatedPresence } from "../../util/useAnimatedPresence";
+import { useClickOutside } from "../../util/useClickOutside";
+import { useNavigate } from "react-router-dom";
 
 const TransactionMenu = ({ transaction }) => {
-	const { visibleTransactionMenu, animatingTransactionMenu, openTransactionMenu, closeTransactionMenu } =
-		useAnimationStore((state) => ({
-			visibleTransactionMenu: state.visibleTransactionMenu,
-			animatingTransactionMenu: state.animatingTransactionMenu,
-			openTransactionMenu: state.openTransactionMenu,
-			closeTransactionMenu: state.closeTransactionMenu,
-			openNotesModal: state.openNotesModal,
-		}));
-	const {
-		transactions,
-		// setNotification,
-		setEditingMerchantSetting,
-		setActiveSetting,
-		setEditingNotesTransaction,
-	} = useDataStore((state) => ({
-		transactions: state.transactions,
-		setNotification: state.setNotification,
+	const { setEditingMerchantSetting, setScrollToNewMerchantSetting, setActiveSetting, setEditingNotesTransaction } = useDataStore((state) => ({
 		setEditingMerchantSetting: state.setEditingMerchantSetting,
+    setScrollToNewMerchantSetting: state.setScrollToNewMerchantSetting,
 		setActiveSetting: state.setActiveSetting,
-		editingNotesTransaction: state.editingNotesTransaction,
 		setEditingNotesTransaction: state.setEditingNotesTransaction,
 	}));
+	const menuRef = useRef(null);
+	const navigate = useNavigate();
+	const { isMounted, animationClass, close, closeAndWait, toggle, onAnimationEnd } = useAnimatedPresence();
+
+	useClickOutside(menuRef, close, isMounted);
 
 	const updateTransactionsIgnoredMutation = useUpdateTransactionsIgnoredMutation();
 	const deleteTransactionsMutation = useDeleteTransactionsMutation();
 
-	const toggleTransactionMenu = async () => {
-		if (visibleTransactionMenu === transaction.id) {
-			await closeTransactionMenu();
-		} else {
-			await openTransactionMenu(transaction.id);
-		}
-	};
-
 	const updateTransactionIgnored = async (ignore) => {
-		await toggleTransactionMenu();
+		await closeAndWait();
 
 		updateTransactionsIgnoredMutation.mutate({
 			transactionIds: [transaction.id],
@@ -50,54 +33,48 @@ const TransactionMenu = ({ transaction }) => {
 	};
 
 	const onClickDelete = async () => {
-		await toggleTransactionMenu();
+		await closeAndWait();
 
 		deleteTransactionsMutation.mutate([transaction.id]);
 	};
 
-	const onClickSaveMerchant = () => {
-		const matchingTransaction = transactions.find((t) => t.id === transaction.id);
-		if (matchingTransaction) {
-			setEditingMerchantSetting({
-				id: -1,
-				category: { name: matchingTransaction.categoryName },
-				text: matchingTransaction.merchant,
-				type: "equals",
-			});
-			setActiveSetting("Merchants");
-		}
+	const onClickSaveMerchant = async () => {
+		await closeAndWait();
+		setEditingMerchantSetting({
+			id: -1,
+			category: { name: transaction.categoryName },
+			text: transaction.merchant,
+			type: "equals",
+		});
+    setScrollToNewMerchantSetting(true);
+		setActiveSetting("Merchants");
+		navigate("/settings");
 	};
 
-	const onClickNotes = () => {
+	const onClickNotes = async () => {
+		await closeAndWait();
 		setEditingNotesTransaction(transaction);
 	};
 
 	return (
-		<div className="transaction-menu w-full relative flex items-center justify-start">
+		<div ref={menuRef} className="transaction-menu w-full relative flex items-center justify-start">
 			<div className="w-full max-w-4">
-				<button onClick={toggleTransactionMenu} className="transaction-menu-button relative">
+				<button onClick={toggle} className="transaction-menu-button relative">
 					<img src="./dots.svg" />
 				</button>
 			</div>
-			{(visibleTransactionMenu === transaction.id || animatingTransactionMenu === transaction.id) && (
+			{isMounted && (
 				<div
-					className={`${
-						animatingTransactionMenu === transaction.id
-							? visibleTransactionMenu === transaction.id
-								? "enter"
-								: "exit"
-							: ""
-					} dropdown-down flex flex-col p-1 overflow-hidden w-[10rem] drop-shadow-sm absolute z-[99] right-0 top-[120%] bg-white border border-slate-200 rounded-lg`}
+					onAnimationEnd={onAnimationEnd}
+					className={`${animationClass} dropdown-down flex flex-col p-1 overflow-hidden w-[10rem] drop-shadow-sm absolute z-[99] right-0 top-[120%] bg-white border border-slate-200 rounded-lg`}
 				>
-					<Link to="/settings">
-						<button
-							onClick={() => onClickSaveMerchant()}
-							className="transaction-menu-button w-full text-start font-normal text-xs hover:bg-slate-50 px-2 py-1 rounded flex items-center gap-1.5"
-						>
-							<img src="./save.svg" className="w-5" />
-							Save Merchant
-						</button>
-					</Link>
+					<button
+						onClick={onClickSaveMerchant}
+						className="transaction-menu-button w-full text-start font-normal text-xs hover:bg-slate-50 px-2 py-1 rounded flex items-center gap-1.5"
+					>
+						<img src="./save.svg" className="w-5" />
+						Save Merchant
+					</button>
 					<button
 						onClick={onClickNotes}
 						className="transaction-menu-button w-full text-start font-normal text-xs hover:bg-slate-50 px-2 py-1 rounded flex items-center gap-1.5"

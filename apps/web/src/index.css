@@ -68,7 +68,8 @@ body {
 }
 
 .dropdown-down,
-.dropdown-up {
+.dropdown-up,
+.modal {
 	animation-fill-mode: forwards;
 }
 

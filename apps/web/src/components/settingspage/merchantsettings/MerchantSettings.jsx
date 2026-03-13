@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDataStore } from "../../../util/dataStore";
 import { useMerchantSettingsQuery } from "../../../queries/useMerchantSettingsQuery";
 import { useCategoriesQuery } from "../../../queries/useCategoriesQuery";
@@ -8,9 +8,11 @@ import MerchantSettingsItemCreate from "./MerchantSettingsItemCreate";
 import ButtonSpinner from "../../common/ButtonSpinner";
 
 const MerchantSettings = () => {
-	const { editingMerchantSetting, setEditingMerchantSetting, setNotification } = useDataStore((state) => ({
+	const { editingMerchantSetting, setEditingMerchantSetting, scrollToNewMerchantSetting, setScrollToNewMerchantSetting, setNotification } = useDataStore((state) => ({
 		editingMerchantSetting: state.editingMerchantSetting,
 		setEditingMerchantSetting: state.setEditingMerchantSetting,
+    scrollToNewMerchantSetting: state.scrollToNewMerchantSetting,
+    setScrollToNewMerchantSetting: state.setScrollToNewMerchantSetting,
 		setNotification: state.setNotification,
 	}));
 	const [loading, setLoading] = useState({
@@ -27,6 +29,17 @@ const MerchantSettings = () => {
 	const applyMerchantSettingsMutation = useApplyMerchantSettingsMutation();
 	const userId = "b82387f7-9d75-4711-91c9-e7558fff4dc6";
 
+  useEffect(() => {
+    if (scrollToNewMerchantSetting) {
+      setTimeout(() => {
+        if (bottomRef.current) {
+          bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+        setScrollToNewMerchantSetting(false);
+      }, 100);
+    }
+  }, [scrollToNewMerchantSetting, setScrollToNewMerchantSetting]);
+
 	const onClickCreate = () => {
 		if (Object.values(loading).some((value) => value)) return;
 
@@ -35,9 +48,7 @@ const MerchantSettings = () => {
 			return;
 		}
 		setEditingMerchantSetting({ id: -1, category: { name: "Uncategorized" }, text: "", type: "contains" });
-		setTimeout(() => {
-			if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: "smooth" });
-		}, 100);
+		setScrollToNewMerchantSetting(true);
 	};
 
 	const onClickApplyToExisting = async () => {

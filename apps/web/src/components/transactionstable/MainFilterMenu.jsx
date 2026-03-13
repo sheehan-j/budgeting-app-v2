@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { useAnimationStore } from "../../util/animationStore";
+import { useRef, useState } from "react";
 import { useDataStore } from "../../util/dataStore";
 import { daysByMonth } from "../../constants/Dates";
 import { defaultFilter } from "../../constants/Filters";
+import { useAnimatedPresence } from "../../util/useAnimatedPresence";
+import { useClickOutside } from "../../util/useClickOutside";
 import DateFilterMenu from "./filtermenus/DateFilterMenu";
 import AmountFilterMenu from "./filtermenus/AmountFilterMenu";
 import MerchantFilterMenu from "./filtermenus/MerchantFilterMenu";
@@ -10,18 +11,23 @@ import ConfigurationFilterMenu from "./filtermenus/ConfigurationFilterMenu";
 import CategoryFilterMenu from "./filtermenus/CategoryFilterMenu";
 
 const FilterButtons = () => {
-	const { filterMenuVisible, filterMenuAnimating, openFilterMenu, closeFilterMenu } = useAnimationStore((state) => ({
-		filterMenuVisible: state.filterMenuVisible,
-		filterMenuAnimating: state.filterMenuAnimating,
-		openFilterMenu: state.openFilterMenu,
-		closeFilterMenu: state.closeFilterMenu,
-	}));
 	const { transactions, filters, setFilters } = useDataStore((state) => ({
 		transactions: state.transactions,
 		filters: state.filters,
 		setFilters: state.setFilters,
 	}));
 	const [selectedFilterOptions, setSelectedFilterOptions] = useState(null);
+	const menuRef = useRef(null);
+	const { isOpen, isMounted, animationClass, open, close, onAnimationEnd } = useAnimatedPresence();
+
+	useClickOutside(
+		menuRef,
+		() => {
+			setSelectedFilterOptions(null);
+			close();
+		},
+		isMounted,
+	);
 
 	const setDateSelectedFilterOption = () => {
 		const today = new Date();
@@ -86,21 +92,28 @@ const FilterButtons = () => {
 	};
 
 	return (
-		<div className="add-filter-button flex gap-1.5">
+		<div ref={menuRef} className="add-filter-button flex gap-1.5">
 			<div className="add-filter-button relative">
 				<button
-					onClick={filterMenuVisible ? closeFilterMenu : openFilterMenu}
+					onClick={() => {
+						if (isOpen) {
+							setSelectedFilterOptions(null);
+							close();
+							return;
+						}
+
+						open();
+					}}
 					className="add-filter-button font-normal text-slate-600 bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-2 px-2"
 				>
 					<div className="add-filter-button w-[1.25rem]" style={{ padding: "0.2rem" }}>
 						<img src="./plus_dark_slate.svg" className="add-filter-button" />
 					</div>
 				</button>
-				{(filterMenuVisible || filterMenuAnimating) && (
+				{isMounted && (
 					<div
-						className={`${
-							filterMenuAnimating ? (filterMenuVisible ? "enter" : "exit") : ""
-						} add-filter-menu dropdown-down overflow-hidden w-[12rem] drop-shadow-sm absolute z-[99] right-0 top-[120%] bg-white border border-slate-200 rounded-lg`}
+						onAnimationEnd={onAnimationEnd}
+						className={`${animationClass} add-filter-menu dropdown-down overflow-hidden w-[12rem] drop-shadow-sm absolute z-[99] right-0 top-[120%] bg-white border border-slate-200 rounded-lg`}
 					>
 						<div
 							className="add-filter-menu flex w-[200%] transition-[transform] duration-200"
