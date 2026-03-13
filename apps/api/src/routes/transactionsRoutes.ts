@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
 import {
+	applyMerchantSettingsToTransactions,
 	deleteTransactions,
 	getTransactions,
 	getTransactionsCount,
@@ -9,11 +10,10 @@ import {
 	setTransactionsIgnored,
 } from "../services/transactionsService.js";
 import {
+	applyMerchantSettingsBodySchema,
 	deleteTransactionsBodySchema,
 	getTransactionsQuerySchema,
 	transactionIdParamsSchema,
-	updateTransactionCategoryBodySchema,
-	updateTransactionIgnoredBodySchema,
 	updateTransactionNotesBodySchema,
 	updateTransactionsCategoryBodySchema,
 	updateTransactionsIgnoredBodySchema,
@@ -53,7 +53,7 @@ transactionsRoutes.get("/count", async (c) => {
 	}
 });
 
-transactionsRoutes.delete("/bulk", async (c) => {
+transactionsRoutes.delete("/", async (c) => {
 	try {
 		const bodyResult = deleteTransactionsBodySchema.safeParse(await c.req.json());
 
@@ -69,23 +69,7 @@ transactionsRoutes.delete("/bulk", async (c) => {
 	}
 });
 
-transactionsRoutes.delete("/:id", async (c) => {
-	try {
-		const paramsResult = transactionIdParamsSchema.safeParse({ id: c.req.param("id") });
-		if (!paramsResult.success) return badRequest(c, z.flattenError(paramsResult.error));
-
-		const deletedTransactions = await deleteTransactions([paramsResult.data.id]);
-		const transaction = deletedTransactions[0];
-		if (!transaction) return c.json({ error: "Transaction not found" }, 404);
-
-		return c.json({ ok: true, transaction });
-	} catch (error) {
-		console.error(error);
-		return c.json({ error: "Failed to delete transaction" }, 500);
-	}
-});
-
-transactionsRoutes.patch("/bulk/ignored", async (c) => {
+transactionsRoutes.patch("/ignored", async (c) => {
 	try {
 		const bodyResult = updateTransactionsIgnoredBodySchema.safeParse(await c.req.json());
 
@@ -101,26 +85,7 @@ transactionsRoutes.patch("/bulk/ignored", async (c) => {
 	}
 });
 
-transactionsRoutes.patch("/:id/ignored", async (c) => {
-	try {
-		const paramsResult = transactionIdParamsSchema.safeParse({ id: c.req.param("id") });
-		const bodyResult = updateTransactionIgnoredBodySchema.safeParse(await c.req.json());
-
-		if (!paramsResult.success) return badRequest(c, z.flattenError(paramsResult.error));
-		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
-
-		const updatedTransactions = await setTransactionsIgnored([paramsResult.data.id], bodyResult.data.ignored);
-		const transaction = updatedTransactions[0];
-		if (!transaction) return c.json({ error: "Transaction not found" }, 404);
-
-		return c.json({ ok: true, transaction });
-	} catch (error) {
-		console.error(error);
-		return c.json({ error: "Failed to update transaction" }, 500);
-	}
-});
-
-transactionsRoutes.patch("/bulk/category", async (c) => {
+transactionsRoutes.patch("/category", async (c) => {
 	try {
 		const bodyResult = updateTransactionsCategoryBodySchema.safeParse(await c.req.json());
 
@@ -136,25 +101,17 @@ transactionsRoutes.patch("/bulk/category", async (c) => {
 	}
 });
 
-transactionsRoutes.patch("/:id/category", async (c) => {
+transactionsRoutes.post("/apply-merchant-settings", async (c) => {
 	try {
-		const paramsResult = transactionIdParamsSchema.safeParse({ id: c.req.param("id") });
-		const bodyResult = updateTransactionCategoryBodySchema.safeParse(await c.req.json());
+		const bodyResult = applyMerchantSettingsBodySchema.safeParse(await c.req.json());
 
-		if (!paramsResult.success) return badRequest(c, z.flattenError(paramsResult.error));
 		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
 
-		const updatedTransactions = await setTransactionCategories(
-			[paramsResult.data.id],
-			bodyResult.data.categoryName,
-		);
-		const transaction = updatedTransactions[0];
-		if (!transaction) return c.json({ error: "Transaction not found" }, 404);
-
-		return c.json({ ok: true, transaction });
+		const result = await applyMerchantSettingsToTransactions(bodyResult.data.userId);
+		return c.json({ ok: true, updatedCount: result.updatedCount });
 	} catch (error) {
 		console.error(error);
-		return c.json({ error: "Failed to update transaction" }, 500);
+		return c.json({ error: "Failed to apply merchant settings" }, 500);
 	}
 });
 
