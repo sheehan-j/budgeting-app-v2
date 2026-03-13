@@ -1,24 +1,38 @@
+import { useRef, useState } from "react";
 import { useUpdateTransactionsCategoryMutation } from "../../mutations/useUpdateTransactionsCategoryMutation";
-import { useAnimationStore } from "../../util/animationStore";
+import { useAnimatedPresence } from "../../util/useAnimatedPresence";
+import { useClickOutside } from "../../util/useClickOutside";
 import ButtonSpinner from "../common/ButtonSpinner";
 import PropTypes from "prop-types";
 
 const TransactionTableCategoryButton = ({ transaction, categories, categoriesLoading, tableRef }) => {
-	const { visibleCategoryMenu, animatingCategoryMenu, menuDirectionDown, openCategoryMenu, closeCategoryMenu } =
-		useAnimationStore((state) => ({
-			visibleCategoryMenu: state.visibleCategoryMenu,
-			animatingCategoryMenu: state.animatingCategoryMenu,
-			menuDirectionDown: state.categoryMenuDirectionDown,
-			openCategoryMenu: state.openCategoryMenu,
-			closeCategoryMenu: state.closeCategoryMenu,
-		}));
-
 	const updateTransactionsCategoryMutation = useUpdateTransactionsCategoryMutation();
+	const containerRef = useRef(null);
+	const buttonRef = useRef(null);
+	const [menuDirectionDown, setMenuDirectionDown] = useState(true);
+	const { isOpen, isMounted, animationClass, open, close, closeAndWait, onAnimationEnd } = useAnimatedPresence();
+
+	useClickOutside(containerRef, close, isMounted);
+
+	const openMenu = () => {
+		if (!buttonRef.current || !tableRef.current) {
+			open();
+			return;
+		}
+
+		const buttonRect = buttonRef.current.getBoundingClientRect();
+		const tableRect = tableRef.current.getBoundingClientRect();
+		const spaceBelow = tableRect.bottom - buttonRect.bottom;
+		const spaceAbove = buttonRect.top - tableRect.top;
+
+		setMenuDirectionDown(!(spaceBelow < 450 && spaceAbove > spaceBelow));
+		open();
+	};
 
 	const onClickCategory = async (categoryName) => {
 		if (updateTransactionsCategoryMutation.isPending) return;
 
-		await closeCategoryMenu();
+		await closeAndWait();
 
 		updateTransactionsCategoryMutation.mutate({
 			transactionIds: [transaction.id],
@@ -29,17 +43,15 @@ const TransactionTableCategoryButton = ({ transaction, categories, categoriesLoa
 	return (
 		<>
 			{!categoriesLoading && (
-				<>
+				<div ref={containerRef} className="relative inline-block">
 					<button
-						ref={(ref) => {
-							transaction.buttonRef = ref;
-						}}
+						ref={buttonRef}
 						onClick={
 							transaction.ignored
 								? () => {} // If the transaction is ignored, do nothing
-								: visibleCategoryMenu === transaction.id
-									? closeCategoryMenu
-									: () => openCategoryMenu(transaction.id, transaction.buttonRef, tableRef)
+								: isOpen
+									? close
+									: openMenu
 						}
 						className={`${
 							transaction.ignored ? "hover:cursor-default" : ""
@@ -57,22 +69,14 @@ const TransactionTableCategoryButton = ({ transaction, categories, categoriesLoa
 					>
 						{transaction.categoryName}
 					</button>
-					{/** Checks if this menu is either currently visible or being animated to be visible/invisible */}
-					{(visibleCategoryMenu === transaction.id || animatingCategoryMenu === transaction.id) && (
+					{isMounted && (
 						<div
-							className={`${
-								animatingCategoryMenu === transaction.id // First checks if this menu is being animated
-									? visibleCategoryMenu === transaction.id // If it is, then check if it should become visible or invisible
-										? "enter"
-										: "exit"
-									: ""
-							} ${
-								// Check if the menu should be below or above the button, based on available space
+							onAnimationEnd={onAnimationEnd}
+							className={`${animationClass} ${
 								menuDirectionDown ? "dropdown-down top-[130%]" : "dropdown-up bottom-[130%]"
-							} absolute bg-white border border-slate-300 rounded-lg drop-shadow-sm z-10 px-2 py-1.5`}
+							} category-menu absolute bg-white border border-slate-300 rounded-lg drop-shadow-sm z-10 px-2 py-1.5`}
 						>
 							<div className="font-semibold text-slate-600 mb-1">Edit Category</div>
-							{/** Map each category to be displayed in the dropdown menu */}
 							<div
 								className={`${updateTransactionsCategoryMutation.isPending ? "opacity-0" : ""} flex flex-col gap-1 relative`}
 							>
@@ -95,7 +99,7 @@ const TransactionTableCategoryButton = ({ transaction, categories, categoriesLoa
 							{updateTransactionsCategoryMutation.isPending && <ButtonSpinner />}
 						</div>
 					)}
-				</>
+				</div>
 			)}
 		</>
 	);

@@ -1,7 +1,7 @@
 import { useDataStore } from "../../util/dataStore";
-import { useAnimationStore } from "../../util/animationStore";
 import { useState, useEffect } from "react";
 import { useUpdateTransactionNotesMutation } from "../../mutations/useUpdateTransactionNotesMutation";
+import { useAnimatedPresence } from "../../util/useAnimatedPresence";
 import ButtonSpinner from "../common/ButtonSpinner";
 
 const NotesModal = () => {
@@ -10,64 +10,65 @@ const NotesModal = () => {
 		setEditingNotesTransaction: state.setEditingNotesTransaction,
 		setNotification: state.setNotification,
 	}));
-	const { notesModalVisible, notesModalAnimating, openNotesModal, closeNotesModal } = useAnimationStore((state) => ({
-		notesModalVisible: state.notesModalVisible,
-		notesModalAnimating: state.notesModalAnimating,
-		openNotesModal: state.openNotesModal,
-		closeNotesModal: state.closeNotesModal,
-	}));
 	const [notes, setNotes] = useState("");
+	const [submitting, setSubmitting] = useState(false);
 	const updateTransactionNotesMutation = useUpdateTransactionNotesMutation();
-	const [animating, setAnimating] = useState(false);
+	const { isMounted, animationClass, open, close, onAnimationEnd, closeAndWait } = useAnimatedPresence();
 
-	const close = async () => {
-		await closeNotesModal();
-
-		await new Promise((resolve) => {
-			setTimeout(() => {
-				setNotes("");
-				setEditingNotesTransaction(null);
-				resolve();
-			}, 100);
-		});
-	};
+	useEffect(() => {
+		if (editingNotesTransaction) {
+			setNotes(editingNotesTransaction.notes || "");
+			open();
+		}
+	}, [editingNotesTransaction, open]);
 
 	const save = async () => {
-		if (animating) return;
+		if (!editingNotesTransaction || submitting) return;
 
-		setAnimating(true);
-		await close();
-		setAnimating(false);
+    // Capture notes here because they will be cleared by the handleAnimationEnd triggered at the end of closeAndWAit
+		const transactionId = editingNotesTransaction.id;
+		const nextNotes = notes;
+		setSubmitting(true);
+
+		await closeAndWait();
 
 		updateTransactionNotesMutation.mutate(
 			{
-				transactionId: editingNotesTransaction.id,
-				notes: notes,
+				transactionId,
+				notes: nextNotes,
 			},
 			{
 				onSuccess: () => {
+					setSubmitting(false);
 					setNotification({ type: "success", message: "Notes saved successfully." });
 				},
 				onError: () => {
+					setSubmitting(false);
 					setNotification({ type: "error", message: "Could not save notes. Please try again later." });
 				},
 			},
 		);
 	};
 
-	useEffect(() => {
-		if (editingNotesTransaction) {
-			setNotes(editingNotesTransaction.notes || "");
-			openNotesModal();
+	const handleAnimationEnd = (event) => {
+		if (event.target !== event.currentTarget) return;
+
+		const isClosing = animationClass === "exit";
+		onAnimationEnd(event);
+
+		if (isClosing) {
+			setNotes("");
+			setEditingNotesTransaction(null);
 		}
-	}, [editingNotesTransaction, openNotesModal]);
+	};
 
 	return (
 		<>
-			{(notesModalVisible || notesModalAnimating) && (
+			{isMounted && (
 				<div
+					onAnimationEnd={handleAnimationEnd}
 					onClick={close}
-					className={`${notesModalAnimating ? (notesModalVisible ? "enter" : "exit") : ""}
+					className={`${animationClass}
         z-[99] overflow-hidden modal top-0 left-0 absolute w-full h-full flex items-center justify-center bg-[rgba(0,0,0,0.25)]`}
 				>
 					<div
@@ -97,8 +98,8 @@ const NotesModal = () => {
 								className="relative bg-blue-100 py-1 px-2 bg-cGreen-light border border-slate-300 rounded text-sm text-slate-700 p-1"
 								onClick={save}
 							>
-								<span className={`${animating ? "opacity-0" : ""}`}>Save</span>
-								{animating && <ButtonSpinner />}
+								<span className={`${submitting ? "opacity-0" : ""}`}>Save</span>
+								{submitting && <ButtonSpinner />}
 							</button>
 						</div>
 					</div>
