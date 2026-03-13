@@ -25,18 +25,14 @@ export const updateTransactionsIgnoredBodySchema = transactionIdsSchema.extend({
 	ignored: z.boolean(),
 });
 
-export const updateTransactionIgnoredBodySchema = z.object({
-	ignored: z.boolean(),
-});
-
 export const updateTransactionsCategoryBodySchema = transactionIdsSchema.extend({
-	categoryName: z.string().trim().min(1),
-});
-
-export const updateTransactionCategoryBodySchema = z.object({
 	categoryName: z.string().trim().min(1),
 });
 
 export const updateTransactionNotesBodySchema = z.object({
 	notes: z.union([z.string(), z.null()]).transform((value) => (value === "" ? null : value)),
+});
+
+export const applyMerchantSettingsBodySchema = z.object({
+	userId: z.string().uuid(),
 });

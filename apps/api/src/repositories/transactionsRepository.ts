@@ -13,12 +13,12 @@ export const getTransactionsRows = async ({ month, year, limit, userId }: Transa
 	if (limit !== undefined) {
 		return whereClause
 			? db.select().from(transactions).where(whereClause).orderBy(desc(transactions.id)).limit(limit)
-			: db.select().from(transactions).orderBy(desc(transactions.id)).limit(limit);
+			: db.select().from(transactions).orderBy(desc(transactions.date)).limit(limit);
 	}
 
 	return whereClause
 		? db.select().from(transactions).where(whereClause).orderBy(desc(transactions.id))
-		: db.select().from(transactions).orderBy(desc(transactions.id));
+		: db.select().from(transactions).orderBy(desc(transactions.date));
 };
 
 export const getTransactionsRowCount = async () => {

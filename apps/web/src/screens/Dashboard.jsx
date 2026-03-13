@@ -1,10 +1,9 @@
-import TransactionTable from "../components/TransactionTable";
-import Navbar from "../components/Navbar";
+import TransactionTable from "../components/transactionstable/TransactionTable";
+import Navbar from "../components/navbar/Navbar";
 import { useDataStore } from "../util/dataStore";
-import NotificationBanner from "../components/NotificationBanner";
-import DashboardStats from "../components/DashboardStats";
-import UploadModal from "../components/UploadModal";
-import NotesModal from "../components/NotesModal";
+import NotificationBanner from "../components/common/NotificationBanner";
+import DashboardStats from "../components/dashboardstats/DashboardStats";
+import NotesModal from "../components/transactionstable/NotesModal";
 
 const Dashboard = () => {
 	const { transactions, setTransactions, transactionsLoading } = useDataStore((state) => ({
@@ -26,7 +25,6 @@ const Dashboard = () => {
 				/>
 			</div>
 			<NotificationBanner />
-			<UploadModal />
 			<NotesModal />
 		</div>
 	);

@@ -38,7 +38,7 @@ const store = (set, get) => ({
 	},
 	closeNotesModal: () => {
 		const { setNotesModalVisible, setNotesModalAnimating } = get();
-		closeMenu(setNotesModalVisible, setNotesModalAnimating);
+		return closeMenu(setNotesModalVisible, setNotesModalAnimating);
 	},
 
 	bulkActionsMenuVisible: false,
@@ -51,7 +51,7 @@ const store = (set, get) => ({
 	},
 	closeBulkActionsMenu: () => {
 		const { setBulkActionsMenuVisible, setBulkActionsMenuAnimating } = get();
-		closeMenu(setBulkActionsMenuVisible, setBulkActionsMenuAnimating);
+		return closeMenu(setBulkActionsMenuVisible, setBulkActionsMenuAnimating);
 	},
 
 	visibleCategoryMenu: null,
@@ -70,12 +70,12 @@ const store = (set, get) => ({
 			visibleCategoryMenu,
 			setCategoryMenuDirectionDown,
 			setAnimatingCategoryMenu,
-			setVisibleCategoryMenu
+			setVisibleCategoryMenu,
 		);
 	},
 	closeCategoryMenu: () => {
 		const { visibleCategoryMenu, setAnimatingCategoryMenu, setVisibleCategoryMenu } = get();
-		closeCategoryMenu(visibleCategoryMenu, setAnimatingCategoryMenu, setVisibleCategoryMenu);
+		return closeCategoryMenu(visibleCategoryMenu, setAnimatingCategoryMenu, setVisibleCategoryMenu);
 	},
 
 	visibleTransactionMenu: null,
@@ -86,17 +86,24 @@ const store = (set, get) => ({
 		const { setAnimatingTransactionMenu, setVisibleTransactionMenu } = get();
 		setAnimatingTransactionMenu(transactionId);
 		setVisibleTransactionMenu(transactionId);
-		setTimeout(() => {
-			setAnimatingTransactionMenu(null);
-		}, 200);
+		return new Promise((resolve) => {
+			setTimeout(() => {
+				setAnimatingTransactionMenu(null);
+        resolve();
+			}, 100);
+		});
 	},
+  
 	closeTransactionMenu: () => {
 		const { visibleTransactionMenu, setAnimatingTransactionMenu, setVisibleTransactionMenu } = get();
 		setAnimatingTransactionMenu(visibleTransactionMenu);
 		setVisibleTransactionMenu(null);
-		setTimeout(() => {
-			setAnimatingTransactionMenu(null);
-		}, 200);
+		return new Promise((resolve) => {
+			setTimeout(() => {
+				setAnimatingTransactionMenu(null);
+        resolve();
+			}, 100);
+		});
 	},
 });
 

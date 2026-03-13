@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { isEmailWhitelisted } from "../util/userUtil";
-import ErrorMessage from "../components/ErrorMessage";
-import supabase from "../config/supabaseClient";
+// import { isEmailWhitelisted } from "../util/userUtil";
+import ErrorMessage from "../components/common/ErrorMessage";
 
 const Login = () => {
 	const [email, setEmail] = useState("");
@@ -10,7 +9,7 @@ const Login = () => {
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [loginVisible, setLoginVisible] = useState(true);
 	const [error, setError] = useState(null);
-  const navigate = useNavigate();
+	const navigate = useNavigate();
 
 	const toggleForm = () => {
 		setEmail("");
@@ -20,49 +19,49 @@ const Login = () => {
 		setLoginVisible(!loginVisible);
 	};
 
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-		if (loginVisible) await handleLogin();
-		else await handleSignup();
-	};
+	// const handleSubmit = async (e) => {
+	// 	e.preventDefault();
+	// 	if (loginVisible) await handleLogin();
+	// 	else await handleSignup();
+	// };
 
-	const handleLogin = async () => {
-		const { error } = await supabase.auth.signInWithPassword({
-			email: email,
-			password: password,
-		});
+	// const handleLogin = async () => {
+	// 	const { error } = await supabase.auth.signInWithPassword({
+	// 		email: email,
+	// 		password: password,
+	// 	});
 
-		if (error) {
-			setError(error.message);
-			return;
-		}
+	// 	if (error) {
+	// 		setError(error.message);
+	// 		return;
+	// 	}
 
-    navigate(0);
-	};
+	//   navigate(0);
+	// };
 
-	const handleSignup = async () => {
-		if (password !== confirmPassword) {
-			setError("Passwords do not match");
-			return;
-		}
+	// const handleSignup = async () => {
+	// 	if (password !== confirmPassword) {
+	// 		setError("Passwords do not match");
+	// 		return;
+	// 	}
 
-    if (!(await isEmailWhitelisted(email))) {
-      setError("Sorry, your email is not whitelisted for signup. Please send an email to jordansheehan26@gmail.com to get your email whitelisted.");
-      return;
-    }
+	//   if (!(await isEmailWhitelisted(email))) {
+	//     setError("Sorry, your email is not whitelisted for signup. Please send an email to jordansheehan26@gmail.com to get your email whitelisted.");
+	//     return;
+	//   }
 
-		const { error } = await supabase.auth.signUp({
-			email: email,
-			password: password,
-		});
+	// 	const { error } = await supabase.auth.signUp({
+	// 		email: email,
+	// 		password: password,
+	// 	});
 
-		if (error) {
-			setError(error.message);
-			return;
-		}
-  
-    navigate(0);
-	};
+	// 	if (error) {
+	// 		setError(error.message);
+	// 		return;
+	// 	}
+
+	//   navigate(0);
+	// };
 
 	return (
 		<div className="w-screen h-screen flex justify-center items-center bg-slate-100">
