@@ -1,17 +1,45 @@
+const animationTimeouts = new Map();
+
+const clearAnimationTimeout = (setAnimating) => {
+	const existingTimeout = animationTimeouts.get(setAnimating);
+	if (existingTimeout) {
+		clearTimeout(existingTimeout);
+		animationTimeouts.delete(setAnimating);
+	}
+};
+
+const scheduleAnimationReset = (setAnimating, value, delay) => {
+	clearAnimationTimeout(setAnimating);
+
+	const timeoutId = setTimeout(() => {
+		setAnimating(value);
+		animationTimeouts.delete(setAnimating);
+	}, delay);
+
+	animationTimeouts.set(setAnimating, timeoutId);
+};
+
 export const openMenu = (setMenuVisible, setMenuAnimating) => {
 	setMenuAnimating(true);
 	setMenuVisible(true);
-	setTimeout(() => {
-		setMenuAnimating(false);
-	}, 100);
+	scheduleAnimationReset(setMenuAnimating, false, 100);
 };
 
-export const closeMenu = (setMenuVisible, setMenuAnimating) => {
+export const closeMenu = async (setMenuVisible, setMenuAnimating) => {
 	setMenuAnimating(true);
 	setMenuVisible(false);
-	setTimeout(() => {
-		setMenuAnimating(false);
-	}, 100);
+
+	return new Promise((resolve) => {
+		clearAnimationTimeout(setMenuAnimating);
+
+		const timeoutId = setTimeout(() => {
+			setMenuAnimating(false);
+			animationTimeouts.delete(setMenuAnimating);
+			resolve();
+		}, 100);
+
+		animationTimeouts.set(setMenuAnimating, timeoutId);
+	});
 };
 
 export const openCategoryMenu = (
@@ -38,16 +66,22 @@ export const openCategoryMenu = (
 
 	setAnimatingCategoryMenu(transactionId);
 	setVisibleCategoryMenu(transactionId);
-	setTimeout(() => {
-		setAnimatingCategoryMenu(null);
-	}, 200);
+	scheduleAnimationReset(setAnimatingCategoryMenu, null, 100);
 };
 
-export const closeCategoryMenu = (visibleCategoryMenu, setAnimatingCategoryMenu, setVisibleCategoryMenu) => {
-	// if (!visibleCategoryMenu) return;
+export const closeCategoryMenu = async (visibleCategoryMenu, setAnimatingCategoryMenu, setVisibleCategoryMenu) => {
 	setAnimatingCategoryMenu(visibleCategoryMenu);
 	setVisibleCategoryMenu(null);
-	setTimeout(() => {
-		setAnimatingCategoryMenu(null);
-	}, 200);
+
+	return new Promise((resolve) => {
+		clearAnimationTimeout(setAnimatingCategoryMenu);
+
+		const timeoutId = setTimeout(() => {
+			setAnimatingCategoryMenu(null);
+			animationTimeouts.delete(setAnimatingCategoryMenu);
+			resolve();
+		}, 100);
+
+		animationTimeouts.set(setAnimatingCategoryMenu, timeoutId);
+	});
 };

@@ -1,75 +1,73 @@
 import { useState, useEffect } from "react";
 import { useDataStore } from "../util/dataStore";
-import { updateBudget } from "../util/supabaseQueries";
+import { useBudgetsQuery } from "../queries/useBudgetsQuery";
+import { useUpdateBudgetsMutation } from "../mutations/useUpdateBudgetsMutation";
 import { monthsByNumber } from "../constants/Dates";
 import { nonEditableCategories, ignoredCategories } from "../constants/Categories";
-import Navbar from "../components/Navbar";
-import NotificationBanner from "../components/NotificationBanner";
-import ButtonSpinner from "../components/ButtonSpinner";
+import Navbar from "../components/navbar/Navbar";
+import NotificationBanner from "../components/common/NotificationBanner";
+import ButtonSpinner from "../components/common/ButtonSpinner";
 
 const Budgets = () => {
-	const {
-		categories,
-		fetchCategories,
-		budgets,
-		budgetsLoading,
-		budgetsMonth,
-		setBudgetsMonth,
-		budgetsYear,
-		setBudgetsYear,
-		fetchBudgets,
-		session,
-		setNotification,
-	} = useDataStore((state) => ({
-		categories: state.categories,
-		fetchCategories: state.fetchCategories,
-		budgets: state.budgets,
-		budgetsLoading: state.budgetsLoading,
-		fetchBudgets: state.fetchBudgets,
+	const { budgetsMonth, setBudgetsMonth, budgetsYear, setBudgetsYear, setNotification } = useDataStore((state) => ({
 		budgetsMonth: state.budgetsMonth,
 		setBudgetsMonth: state.setBudgetsMonth,
 		budgetsYear: state.budgetsYear,
 		setBudgetsYear: state.setBudgetsYear,
-		session: state.session,
 		setNotification: state.setNotification,
 	}));
-	const [localBudgets, setLocalBudgets] = useState(budgets);
-	const [preEditBudgets, setPreEditBudgets] = useState(null);
+
+	const userId = "b82387f7-9d75-4711-91c9-e7558fff4dc6";
+	const {
+		data: budgets,
+		isLoading: budgetsLoading,
+		isFetching: budgetsFetching,
+	} = useBudgetsQuery(userId, budgetsMonth, budgetsYear);
+
+	const updateBudgetsMutation = useUpdateBudgetsMutation();
+	const [localBudgets, setLocalBudgets] = useState([]);
 	const [editing, setEditing] = useState(false);
-	const [saving, setSaving] = useState(false);
+	const saving = updateBudgetsMutation.isPending;
 
 	useEffect(() => {
-		if (categories === null) fetchCategories();
-		if (budgets === null) fetchBudgets();
-	}, [budgets, categories, fetchBudgets, fetchCategories]);
-
-	useEffect(() => {
-		setLocalBudgets(budgets);
+		if (!editing) setLocalBudgets(budgets);
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [budgets]);
-
-	useEffect(() => {
-		fetchBudgets();
-	}, [budgetsMonth, budgetsYear, fetchBudgets]);
 
 	const onClickEdit = () => {
 		if (saving) return;
 		if (editing) {
-			setLocalBudgets([...preEditBudgets]);
+			setLocalBudgets(budgets ?? []);
 			setEditing(false);
 		} else {
-			setPreEditBudgets([...localBudgets]);
 			setEditing(true);
 		}
 	};
 
 	const onClickSave = async () => {
 		if (editing && !saving) {
-			setSaving(true);
-			if (!(await updateBudget(localBudgets, session.user.id)))
-				setNotification({ type: "error", message: "Could not update budgets." });
-			await fetchBudgets();
-			setEditing(false);
-			setSaving(false);
+			updateBudgetsMutation.mutate(
+				{
+					budgets: localBudgets,
+					userId,
+					month: budgetsMonth,
+					year: budgetsYear,
+				},
+				{
+					onSuccess: (updatedBudgets) => {
+						if (!updatedBudgets) {
+							setNotification({ type: "error", message: "Could not update budgets." });
+							return;
+						}
+
+						setLocalBudgets(updatedBudgets);
+						setEditing(false);
+					},
+					onError: () => {
+						setNotification({ type: "error", message: "Could not update budgets." });
+					},
+				},
+			);
 		}
 	};
 
@@ -112,7 +110,7 @@ const Budgets = () => {
 								onClick={onClickEdit}
 								className="border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded"
 							>
-								Edit
+								{editing ? "Cancel" : "Edit"}
 							</button>
 							<button
 								onClick={onClickSave}
@@ -126,7 +124,7 @@ const Budgets = () => {
 						</div>
 					</div>
 
-					{budgetsLoading && (
+					{(budgetsLoading || budgetsFetching) && (
 						<div className="flex grow relative justify-center text-sm text-slate-500 items-center opacity-80">
 							<ButtonSpinner />
 							<div className="mt-16">Loading budgets...</div>

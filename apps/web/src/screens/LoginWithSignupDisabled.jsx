@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ErrorMessage from "../components/ErrorMessage";
+import ErrorMessage from "../components/common/ErrorMessage";
 import supabase from "../config/supabaseClient";
 
 const LoginWithSignupDisabled = () => {

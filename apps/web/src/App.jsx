@@ -8,14 +8,11 @@ import Spending from "./screens/Spending";
 import Budgets from "./screens/Budgets";
 import Settings from "./screens/Settings";
 import Login from "./screens/Login";
-import supabase from "./config/supabaseClient";
 
 const App = () => {
-	const { session, setSession, totalTransactionCount, fetchTotalTransactionCount } = useDataStore((state) => ({
+	const { session, setSession } = useDataStore((state) => ({
 		session: state.session,
 		setSession: state.setSession,
-		totalTransactionCount: state.totalTransactionCount,
-		fetchTotalTransactionCount: state.fetchTotalTransactionCount,
 	}));
 	const {
 		filterMenuVisible,
@@ -36,66 +33,24 @@ const App = () => {
 		bulkActionsMenuVisible: state.bulkActionsMenuVisible,
 		closeBulkActionsMenu: state.closeBulkActionsMenu,
 	}));
-	const {
-		transactions,
-		fetchTransactions,
-		transactionsLoading,
-		categories,
-		fetchCategories,
-		merchantSettings,
-		fetchMerchantSettings,
-		uploads,
-		fetchUploads,
-	} = useDataStore((state) => ({
-		transactions: state.transactions,
-		fetchTransactions: state.fetchTransactions,
-		transactionsLoading: state.transactionsLoading,
-		categories: state.categories,
-		fetchCategories: state.fetchCategories,
-		merchantSettings: state.merchantSettings,
-		fetchMerchantSettings: state.fetchMerchantSettings,
-		uploads: state.uploads,
-		fetchUploads: state.fetchUploads,
-	}));
-	const [loading, setLoading] = useState(true);
+	// const [loading, setLoading] = useState(true);
 
-	const loadData = async () => {
-		const images = {
-			dashboardGreen: "./dashboard_green.svg",
-			dashboardSlate: "./dashboard_slate.svg",
-			transactionsGreen: "./transactions_green.svg",
-			transactionsSlate: "./transactions_slate.svg",
-			settingsGreen: "./settings_green.svg",
-			settingsSlate: "./settings_slate.svg",
-		};
+	// const loadData = async () => {
+	// 	const images = {
+	// 		dashboardGreen: "./dashboard_green.svg",
+	// 		dashboardSlate: "./dashboard_slate.svg",
+	// 		transactionsGreen: "./transactions_green.svg",
+	// 		transactionsSlate: "./transactions_slate.svg",
+	// 		settingsGreen: "./settings_green.svg",
+	// 		settingsSlate: "./settings_slate.svg",
+	// 	};
 
-		// eslint-disable-next-line no-unused-vars
-		Object.entries(images).map(async ([key, value]) => {
-			const img = new Image();
-			img.src = value;
-		});
-
-		const { data, error } = await supabase.auth.getSession();
-		if (!error) setSession(data.session);
-
-		setLoading(false);
-
-		if (totalTransactionCount == -1) await fetchTotalTransactionCount();
-	};
-
-	useEffect(() => {
-		const {
-			data: { subscription },
-		} = supabase.auth.onAuthStateChange((_event, session) => {
-			setSession(session);
-		});
-
-		return () => subscription.unsubscribe();
-	}, []);
-
-	useEffect(() => {
-		loadData();
-	}, []);
+	// 	// eslint-disable-next-line no-unused-vars
+	// 	Object.entries(images).map(async ([key, value]) => {
+	// 		const img = new Image();
+	// 		img.src = value;
+	// 	});
+	// };
 
 	window.onclick = (event) => {
 		const categoryMenuClassNames = [".category-button", ".category-menu"];
@@ -130,24 +85,17 @@ const App = () => {
 		}
 	};
 
-	const updateDataStore = () => {
-		if (transactions === null && !transactionsLoading) fetchTransactions(); // This will trigger load dashboard stats itself
-		if (categories === null) fetchCategories();
-		if (merchantSettings === null) fetchMerchantSettings();
-		if (uploads === null) fetchUploads();
-	};
-
-	useEffect(() => {
-		updateDataStore();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
-
-	if (loading) return null;
+  // TODO: Add back later
+	// if (loading) return null;
 
 	return (
 		<BrowserRouter>
 			<Routes>
-				{session ? (
+        <Route path="/*" element={<Dashboard />} />
+        <Route path="/spending" element={<Spending />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/budgets" element={<Budgets />} />
+				{/* {session ? (
 					<>
 						<Route path="/*" element={<Dashboard />} />
 						<Route path="/spending" element={<Spending />} />
@@ -158,7 +106,7 @@ const App = () => {
 					<>
 						<Route path="/*" element={<Login />} />
 					</>
-				)}
+				)} */}
 			</Routes>
 		</BrowserRouter>
 	);
