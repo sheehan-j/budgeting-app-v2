@@ -13,9 +13,7 @@ export const useUpdateTransactionNotesMutation = () => {
 		mutationFn: async ({ transactionId, notes }: UpdateTransactionNotesVariables) => {
 			return setTransactionNotes(transactionId, notes);
 		},
-		onSuccess: async (success) => {
-			if (!success) return;
-
+		onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["yearlySpending"] }),

@@ -13,9 +13,7 @@ export const useUpdateTransactionsCategoryMutation = () => {
 		mutationFn: async ({ transactionIds, categoryName }: UpdateTransactionsCategoryVariables) => {
 			return setTransactionCategories(transactionIds, categoryName);
 		},
-		onSuccess: async (success) => {
-			if (!success) return;
-
+		onSuccess: async () => {
 			await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["yearlySpending"] }),

@@ -17,8 +17,6 @@ export const useUpdateBudgetsMutation = () => {
 			return updateBudget(budgets, userId, month, year);
 		},
 		onSuccess: async (updatedBudgets, variables) => {
-			if (!updatedBudgets) return;
-
 			queryClient.setQueryData(
 				getBudgetsQueryKey(variables.userId, variables.month, variables.year),
 				updatedBudgets,

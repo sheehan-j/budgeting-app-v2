@@ -100,7 +100,7 @@ const DashboardStats = () => {
 						</div>
 					</>
 				)}
-				{!showInitialLoadingState && (
+				{!showInitialLoadingState && dashboardStats && (
 					<>
 						<div className="flex justify-between items-center text-lg font-semibold mb-1.5">
 							{/* TOP CATEGORIES LABEL */}

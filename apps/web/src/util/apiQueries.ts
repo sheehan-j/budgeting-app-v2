@@ -153,18 +153,22 @@ type OkResponse = {
 	ok: boolean;
 };
 
+
+const throwWithMessage = (message: string): never => {
+	throw new Error(message);
+};
+
 export const getTransactions = async (): Promise<Transaction[]> => {
 	try {
 		const data = await apiClient.get<Transaction[]>("/transactions");
 
 		if (data.length === 100000) {
-			alert("Transaction count has reached 100000.");
+			console.warn("Transaction count has reached 100000.");
 		}
 
 		return formatTransactions(data);
-	} catch (error: any) {
-		alert("Error retrieving transactions:" + error.message);
-		return [];
+	} catch {
+		return throwWithMessage("Could not fetch transactions.");
 	}
 };
 
@@ -177,8 +181,7 @@ export const getTransactionsByMonth = async (dateObj: Date): Promise<Transaction
 
 		return formatTransactions(data);
 	} catch {
-		alert("Could not fetch dashboard statistics");
-		return [];
+		return throwWithMessage("Could not fetch dashboard transactions.");
 	}
 };
 
@@ -187,7 +190,7 @@ export const getTransactionCount = async (): Promise<number> => {
 		const data = await apiClient.get<TransactionCountResponse>("/transactions/count");
 		return data.count;
 	} catch {
-		return 0;
+		return throwWithMessage("Could not fetch transaction count.");
 	}
 };
 
@@ -222,7 +225,7 @@ export const setTransactionCategories = async (
 		});
 		return true;
 	} catch {
-		return false;
+		return throwWithMessage("Could not update transaction categories.");
 	}
 };
 
@@ -236,7 +239,7 @@ export const setTransactionNotes = async (
 		});
 		return true;
 	} catch {
-		return false;
+		return throwWithMessage("Could not update transaction notes.");
 	}
 };
 
@@ -250,7 +253,7 @@ export const setTransactionsIgnored = async (transactionIds: number[], ignored: 
 		});
 		return true;
 	} catch {
-		return false;
+		return throwWithMessage("Could not update transactions.");
 	}
 };
 
@@ -261,7 +264,7 @@ export const deleteTransactions = async (transactionIds: number[]): Promise<bool
 		await apiClient.del("/transactions", { ids: transactionIds });
 		return true;
 	} catch {
-		return false;
+		return throwWithMessage("Could not delete transactions.");
 	}
 };
 
@@ -270,15 +273,14 @@ export const getCategories = async (): Promise<Category[]> => {
 		const data = await apiClient.get<Category[]>("/categories");
 		return [...data].sort((a, b) => a.orderIndex - b.orderIndex);
 	} catch {
-		alert("Could not fetch categories");
-		return [];
+		return throwWithMessage("Could not fetch categories.");
 	}
 };
 
 export const getDashboardData = async (
 	userId: string,
 	filters: DashboardFilter[],
-): Promise<DashboardResponse | null> => {
+): Promise<DashboardResponse> => {
 	try {
 		const data = await apiClient.post<DashboardResponse, { userId: string; filters: DashboardFilter[] }>(
 			"/dashboard/stats",
@@ -290,8 +292,7 @@ export const getDashboardData = async (
 			stats: data.stats,
 		};
 	} catch {
-		alert("Could not fetch dashboard data");
-		return null;
+		return throwWithMessage("Could not fetch dashboard data.");
 	}
 };
 
@@ -299,7 +300,7 @@ export const getSpending = async (
 	year: number | string,
 	userId?: string,
 ): Promise<Record<string, number>[]> => {
-	if (!userId) return [];
+	if (!userId) return throwWithMessage("Missing user ID for spending.");
 
 	try {
 		return await apiClient.get<Record<string, number>[]>("/dashboard/spending", {
@@ -307,8 +308,7 @@ export const getSpending = async (
 			year: Number(year),
 		});
 	} catch {
-		alert("Could not fetch spending data");
-		return [];
+		return throwWithMessage("Could not fetch spending data.");
 	}
 };
 
@@ -318,7 +318,7 @@ export const getBudgets = async (
 	userId?: string,
 ): Promise<CategoryBudget[]> => {
 	try {
-		if (!userId) return [];
+		if (!userId) return throwWithMessage("Missing user ID for budgets.");
 
 		return await apiClient.get<CategoryBudget[]>("/budgets", {
 			month: Number(month),
@@ -326,8 +326,7 @@ export const getBudgets = async (
 			userId,
 		});
 	} catch {
-		alert("Could not fetch budgets");
-		return [];
+		return throwWithMessage("Could not fetch budgets.");
 	}
 };
 
@@ -336,7 +335,7 @@ export const updateBudget = async (
 	userId: string,
 	month: number | string,
 	year: number | string,
-): Promise<CategoryBudget[] | null> => {
+): Promise<CategoryBudget[]> => {
 	try {
 		const response = await apiClient.put<
 			BudgetResponse,
@@ -356,9 +355,9 @@ export const updateBudget = async (
 			})),
 		});
 
-		return response.ok ? response.budgets : null;
+		return response.budgets;
 	} catch {
-		return null;
+		return throwWithMessage("Could not update budgets.");
 	}
 };
 
@@ -369,8 +368,7 @@ export const getMerchantSettings = async (): Promise<MerchantSetting[]> => {
 		const merchantSettings = await apiClient.get<MerchantSetting[]>("/merchants", { userId });
 		return [...merchantSettings].sort((a, b) => a.id - b.id);
 	} catch {
-		alert("Could not fetch merchant settings");
-		return [];
+		return throwWithMessage("Could not fetch merchant settings.");
 	}
 };
 
@@ -379,7 +377,7 @@ export const upsertMerchantSetting = async (merchantSetting: MerchantSetting): P
 		const response = await apiClient.put<MerchantSettingResponse, MerchantSetting>("/merchants", merchantSetting);
 		return response.ok;
 	} catch {
-		return false;
+		return throwWithMessage("Could not save merchant setting.");
 	}
 };
 
@@ -388,13 +386,13 @@ export const deleteMerchantSetting = async (merchantSettingId: number): Promise<
 		const response = await apiClient.del<OkResponse>(`/merchants/${merchantSettingId}`);
 		return response.ok;
 	} catch {
-		return false;
+		return throwWithMessage("Could not delete merchant setting.");
 	}
 };
 
 export const applyMerchantSettingsToExistingTransactions = async (
 	userId: string,
-): Promise<number | null> => {
+): Promise<number> => {
 	try {
 		const response = await apiClient.post<
 			ApplyMerchantSettingsResponse,
@@ -405,7 +403,7 @@ export const applyMerchantSettingsToExistingTransactions = async (
 
 		return response.updatedCount;
 	} catch {
-		return null;
+		return throwWithMessage("Could not apply merchant settings to existing transactions.");
 	}
 };
 

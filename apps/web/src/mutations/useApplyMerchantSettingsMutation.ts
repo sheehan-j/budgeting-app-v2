@@ -8,9 +8,7 @@ export const useApplyMerchantSettingsMutation = () => {
 		mutationFn: async (userId: string) => {
 			return applyMerchantSettingsToExistingTransactions(userId);
 		},
-		onSuccess: async (updatedCount) => {
-			if (updatedCount === null) return;
-
+		onSuccess: async () => {
 			await Promise.all([
 				queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
 				queryClient.invalidateQueries({ queryKey: ["yearlySpending"] }),
