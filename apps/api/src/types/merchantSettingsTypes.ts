@@ -3,6 +3,5 @@ export type MerchantSettingInput = {
 	text: string;
 	type: string;
 	categoryName: string;
-	userId: string;
 };
 

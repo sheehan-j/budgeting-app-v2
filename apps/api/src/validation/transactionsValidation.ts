@@ -34,5 +34,4 @@ export const updateTransactionNotesBodySchema = z.object({
 });
 
 export const applyMerchantSettingsBodySchema = z.object({
-	userId: z.string().uuid(),
-});
+}).strict();

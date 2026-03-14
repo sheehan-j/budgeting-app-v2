@@ -1,8 +1,10 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { authClient } from "./lib/authClient";
 import Dashboard from "./screens/Dashboard";
 import Spending from "./screens/Spending";
 import Budgets from "./screens/Budgets";
+import Login from "./screens/Login";
 import Settings from "./screens/Settings";
 
 const App = () => {
@@ -23,17 +25,21 @@ const App = () => {
 	// 	});
 	// };
 
-  // TODO: Add back later
+	// TODO: Add back later
 	// if (loading) return null;
+
+	const { data: session, isPending } = authClient.useSession();
+
+  if (isPending) return null;
 
 	return (
 		<BrowserRouter>
 			<Routes>
-        <Route path="/*" element={<Dashboard />} />
-        <Route path="/spending" element={<Spending />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/budgets" element={<Budgets />} />
-				{/* {session ? (
+				{/* <Route path="/*" element={<Dashboard />} />
+				<Route path="/spending" element={<Spending />} />
+				<Route path="/settings" element={<Settings />} />
+				<Route path="/budgets" element={<Budgets />} /> */}
+				{session ? (
 					<>
 						<Route path="/*" element={<Dashboard />} />
 						<Route path="/spending" element={<Spending />} />
@@ -44,7 +50,7 @@ const App = () => {
 					<>
 						<Route path="/*" element={<Login />} />
 					</>
-				)} */}
+				)}
 			</Routes>
 		</BrowserRouter>
 	);

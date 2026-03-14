@@ -1,7 +1,6 @@
 export type BudgetQuery = {
 	month: number;
 	year: number;
-	userId: string;
 };
 
 export type BudgetUpdateInput = {

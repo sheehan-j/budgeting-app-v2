@@ -1,24 +1,29 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
+import { getAuthenticatedUser, type AppBindings } from "../lib/auth.js";
 import { getDashboardStats, getYearlySpending } from "../services/dashboardService.js";
 import { getDashboardBodySchema, getYearlySpendingQuerySchema } from "../validation/dashboardValidation.js";
 
-const dashboardRoutes = new Hono();
+const dashboardRoutes = new Hono<AppBindings>();
 
-const badRequest = (c: Context, error: unknown) => {
+const badRequest = (c: Context<AppBindings>, error: unknown) => {
 	return c.json({ error }, 400);
 };
 
+const unauthorized = (c: Context<AppBindings>) => c.json({ error: "Unauthorized" }, 401);
+
 dashboardRoutes.get("/spending", async (c) => {
 	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
 		const queryResult = getYearlySpendingQuerySchema.safeParse({
-			userId: c.req.query("userId"),
 			year: c.req.query("year"),
 		});
 
 		if (!queryResult.success) return badRequest(c, z.flattenError(queryResult.error));
 
-		const spending = await getYearlySpending(queryResult.data);
+		const spending = await getYearlySpending({ ...queryResult.data, userId: user.id });
 		return c.json(spending);
 	} catch (error) {
 		console.error(error);
@@ -28,9 +33,12 @@ dashboardRoutes.get("/spending", async (c) => {
 
 dashboardRoutes.post("/stats", async (c) => {
 	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
 		const bodyResult = getDashboardBodySchema.safeParse(await c.req.json());
 		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
-		const dashboardData = await getDashboardStats(bodyResult.data);
+		const dashboardData = await getDashboardStats({ ...bodyResult.data, userId: user.id });
 		return c.json(dashboardData);
 	} catch (error) {
 		console.error(error);

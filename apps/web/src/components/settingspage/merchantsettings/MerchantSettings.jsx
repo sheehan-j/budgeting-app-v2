@@ -27,7 +27,6 @@ const MerchantSettings = () => {
 	const { data: categories, isLoading: categoriesLoading } = useCategoriesQuery();
 	const { data: merchantSettings, isLoading: merchantSettingsLoading } = useMerchantSettingsQuery();
 	const applyMerchantSettingsMutation = useApplyMerchantSettingsMutation();
-	const userId = "b82387f7-9d75-4711-91c9-e7558fff4dc6";
 
   useEffect(() => {
     if (scrollToNewMerchantSetting) {
@@ -56,17 +55,9 @@ const MerchantSettings = () => {
 
 		setLoading({ ...loading, apply: true });
 
-		applyMerchantSettingsMutation.mutate(userId, {
+		applyMerchantSettingsMutation.mutate(undefined, {
 			onSuccess: (updatedCount) => {
 				setLoading({ ...loading, apply: false });
-
-				if (updatedCount === null) {
-					setNotification({
-						type: "error",
-						message: "Could not apply merchant settings to existing transactions.",
-					});
-					return;
-				}
 
 				setNotification({
 					type: "success",

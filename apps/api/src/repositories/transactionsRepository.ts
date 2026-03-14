@@ -26,30 +26,41 @@ export const getTransactionsRowCount = async () => {
 	return result[0]?.count ?? 0;
 };
 
-export const updateTransactionsIgnoredRows = async (ids: number[], ignored: boolean) => {
+export const getTransactionsRowCountByUser = async (userId: string) => {
+	const result = await db
+		.select({ count: count() })
+		.from(transactions)
+		.where(eq(transactions.userId, userId));
+	return result[0]?.count ?? 0;
+};
+
+export const updateTransactionsIgnoredRows = async (ids: number[], ignored: boolean, userId: string) => {
 	return db
 		.update(transactions)
 		.set({ ignored })
-		.where(inArray(transactions.id, ids))
+		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
 		.returning();
 };
 
-export const updateTransactionsCategoryRows = async (ids: number[], categoryName: string) => {
+export const updateTransactionsCategoryRows = async (ids: number[], categoryName: string, userId: string) => {
 	return db
 		.update(transactions)
 		.set({ categoryName })
-		.where(inArray(transactions.id, ids))
+		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
 		.returning();
 };
 
-export const updateTransactionsNotesRows = async (ids: number[], notes: string | null) => {
+export const updateTransactionsNotesRows = async (ids: number[], notes: string | null, userId: string) => {
 	return db
 		.update(transactions)
 		.set({ notes })
-		.where(inArray(transactions.id, ids))
+		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
 		.returning();
 };
 
-export const deleteTransactionRows = async (ids: number[]) => {
-	return db.delete(transactions).where(inArray(transactions.id, ids)).returning();
+export const deleteTransactionRows = async (ids: number[], userId: string) => {
+	return db
+		.delete(transactions)
+		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
+		.returning();
 };

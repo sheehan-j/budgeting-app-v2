@@ -53,7 +53,6 @@ type MerchantSetting = {
 	type: string;
 	category?: MerchantCategory;
 	categoryName?: string;
-	userId?: string;
 	[key: string]: unknown;
 };
 
@@ -277,14 +276,11 @@ export const getCategories = async (): Promise<Category[]> => {
 	}
 };
 
-export const getDashboardData = async (
-	userId: string,
-	filters: DashboardFilter[],
-): Promise<DashboardResponse> => {
+export const getDashboardData = async (filters: DashboardFilter[]): Promise<DashboardResponse> => {
 	try {
-		const data = await apiClient.post<DashboardResponse, { userId: string; filters: DashboardFilter[] }>(
+		const data = await apiClient.post<DashboardResponse, { filters: DashboardFilter[] }>(
 			"/dashboard/stats",
-			{ userId, filters },
+			{ filters },
 		);
 
 		return {
@@ -296,15 +292,9 @@ export const getDashboardData = async (
 	}
 };
 
-export const getSpending = async (
-	year: number | string,
-	userId?: string,
-): Promise<Record<string, number>[]> => {
-	if (!userId) return throwWithMessage("Missing user ID for spending.");
-
+export const getSpending = async (year: number | string): Promise<Record<string, number>[]> => {
 	try {
 		return await apiClient.get<Record<string, number>[]>("/dashboard/spending", {
-			userId,
 			year: Number(year),
 		});
 	} catch {
@@ -315,15 +305,11 @@ export const getSpending = async (
 export const getBudgets = async (
 	month: number | string,
 	year: number | string,
-	userId?: string,
 ): Promise<CategoryBudget[]> => {
 	try {
-		if (!userId) return throwWithMessage("Missing user ID for budgets.");
-
 		return await apiClient.get<CategoryBudget[]>("/budgets", {
 			month: Number(month),
 			year: Number(year),
-			userId,
 		});
 	} catch {
 		return throwWithMessage("Could not fetch budgets.");
@@ -332,7 +318,6 @@ export const getBudgets = async (
 
 export const updateBudget = async (
 	newBudgets: CategoryBudget[],
-	userId: string,
 	month: number | string,
 	year: number | string,
 ): Promise<CategoryBudget[]> => {
@@ -342,13 +327,11 @@ export const updateBudget = async (
 			{
 				month: number;
 				year: number;
-				userId: string;
 				budgets: { name: string; limit: number | string | null | undefined }[];
 			}
 		>("/budgets", {
 			month: Number(month),
 			year: Number(year),
-			userId,
 			budgets: newBudgets.map((budget) => ({
 				name: budget.name,
 				limit: budget.limit ?? null,
@@ -363,9 +346,7 @@ export const updateBudget = async (
 
 export const getMerchantSettings = async (): Promise<MerchantSetting[]> => {
 	try {
-		const userId = "b82387f7-9d75-4711-91c9-e7558fff4dc6";
-
-		const merchantSettings = await apiClient.get<MerchantSetting[]>("/merchants", { userId });
+		const merchantSettings = await apiClient.get<MerchantSetting[]>("/merchants");
 		return [...merchantSettings].sort((a, b) => a.id - b.id);
 	} catch {
 		return throwWithMessage("Could not fetch merchant settings.");
@@ -390,16 +371,12 @@ export const deleteMerchantSetting = async (merchantSettingId: number): Promise<
 	}
 };
 
-export const applyMerchantSettingsToExistingTransactions = async (
-	userId: string,
-): Promise<number> => {
+export const applyMerchantSettingsToExistingTransactions = async (): Promise<number> => {
 	try {
-		const response = await apiClient.post<
-			ApplyMerchantSettingsResponse,
-			{
-				userId: string;
-			}
-		>("/transactions/apply-merchant-settings", { userId });
+		const response = await apiClient.post<ApplyMerchantSettingsResponse, Record<string, never>>(
+			"/transactions/apply-merchant-settings",
+			{},
+		);
 
 		return response.updatedCount;
 	} catch {

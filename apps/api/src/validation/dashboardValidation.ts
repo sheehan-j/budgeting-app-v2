@@ -47,11 +47,9 @@ export const dashboardFilterSchema = z.discriminatedUnion("type", [
 ]);
 
 export const getDashboardBodySchema = z.object({
-	userId: z.string(),
 	filters: z.array(dashboardFilterSchema),
 });
 
 export const getYearlySpendingQuerySchema = z.object({
-	userId: z.string(),
 	year: z.coerce.number().int(),
 });

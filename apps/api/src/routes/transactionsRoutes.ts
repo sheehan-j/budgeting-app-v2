@@ -1,5 +1,6 @@
 import { Hono, type Context } from "hono";
 import { z } from "zod";
+import { getAuthenticatedUser, type AppBindings } from "../lib/auth.js";
 import {
 	applyMerchantSettingsToTransactions,
 	deleteTransactions,
@@ -19,14 +20,19 @@ import {
 	updateTransactionsIgnoredBodySchema,
 } from "../validation/transactionsValidation.js";
 
-const transactionsRoutes = new Hono();
+const transactionsRoutes = new Hono<AppBindings>();
 
-const badRequest = (c: Context, error: unknown) => {
+const badRequest = (c: Context<AppBindings>, error: unknown) => {
 	return c.json({ error }, 400);
 };
 
+const unauthorized = (c: Context<AppBindings>) => c.json({ error: "Unauthorized" }, 401);
+
 transactionsRoutes.get("/", async (c) => {
 	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
 		const queryResult = getTransactionsQuerySchema.safeParse({
 			month: c.req.query("month"),
 			year: c.req.query("year"),
@@ -35,7 +41,7 @@ transactionsRoutes.get("/", async (c) => {
 
 		if (!queryResult.success) return badRequest(c, z.flattenError(queryResult.error));
 
-		const rows = await getTransactions(queryResult.data);
+		const rows = await getTransactions(user.id, queryResult.data);
 		return c.json(rows);
 	} catch (error) {
 		console.error(error);
@@ -45,7 +51,10 @@ transactionsRoutes.get("/", async (c) => {
 
 transactionsRoutes.get("/count", async (c) => {
 	try {
-		const count = await getTransactionsCount();
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
+		const count = await getTransactionsCount(user.id);
 		return c.json({ count });
 	} catch (error) {
 		console.error(error);
@@ -55,13 +64,16 @@ transactionsRoutes.get("/count", async (c) => {
 
 transactionsRoutes.delete("/", async (c) => {
 	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
 		const bodyResult = deleteTransactionsBodySchema.safeParse(await c.req.json());
 
 		if (!bodyResult.success) {
 			return badRequest(c, z.flattenError(bodyResult.error));
 		}
 
-		const deletedTransactions = await deleteTransactions(bodyResult.data.ids);
+		const deletedTransactions = await deleteTransactions(bodyResult.data.ids, user.id);
 		return c.json({ ok: true, transactions: deletedTransactions });
 	} catch (error) {
 		console.error(error);
@@ -71,13 +83,16 @@ transactionsRoutes.delete("/", async (c) => {
 
 transactionsRoutes.patch("/ignored", async (c) => {
 	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
 		const bodyResult = updateTransactionsIgnoredBodySchema.safeParse(await c.req.json());
 
 		if (!bodyResult.success) {
 			return badRequest(c, z.flattenError(bodyResult.error));
 		}
 
-		const updatedTransactions = await setTransactionsIgnored(bodyResult.data.ids, bodyResult.data.ignored);
+		const updatedTransactions = await setTransactionsIgnored(bodyResult.data.ids, bodyResult.data.ignored, user.id);
 		return c.json({ ok: true, transactions: updatedTransactions });
 	} catch (error) {
 		console.error(error);
@@ -87,13 +102,20 @@ transactionsRoutes.patch("/ignored", async (c) => {
 
 transactionsRoutes.patch("/category", async (c) => {
 	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
 		const bodyResult = updateTransactionsCategoryBodySchema.safeParse(await c.req.json());
 
 		if (!bodyResult.success) {
 			return badRequest(c, z.flattenError(bodyResult.error));
 		}
 
-		const updatedTransactions = await setTransactionCategories(bodyResult.data.ids, bodyResult.data.categoryName);
+		const updatedTransactions = await setTransactionCategories(
+			bodyResult.data.ids,
+			bodyResult.data.categoryName,
+			user.id,
+		);
 		return c.json({ ok: true, transactions: updatedTransactions });
 	} catch (error) {
 		console.error(error);
@@ -103,11 +125,14 @@ transactionsRoutes.patch("/category", async (c) => {
 
 transactionsRoutes.post("/apply-merchant-settings", async (c) => {
 	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
 		const bodyResult = applyMerchantSettingsBodySchema.safeParse(await c.req.json());
 
 		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
 
-		const result = await applyMerchantSettingsToTransactions(bodyResult.data.userId);
+		const result = await applyMerchantSettingsToTransactions(user.id);
 		return c.json({ ok: true, updatedCount: result.updatedCount });
 	} catch (error) {
 		console.error(error);
@@ -117,13 +142,16 @@ transactionsRoutes.post("/apply-merchant-settings", async (c) => {
 
 transactionsRoutes.patch("/:id/notes", async (c) => {
 	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
 		const paramsResult = transactionIdParamsSchema.safeParse({ id: c.req.param("id") });
 		const bodyResult = updateTransactionNotesBodySchema.safeParse(await c.req.json());
 
 		if (!paramsResult.success) return badRequest(c, z.flattenError(paramsResult.error));
 		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
 
-		const updatedTransactions = await setTransactionNotes([paramsResult.data.id], bodyResult.data.notes);
+		const updatedTransactions = await setTransactionNotes([paramsResult.data.id], bodyResult.data.notes, user.id);
 		const transaction = updatedTransactions[0];
 		if (!transaction) return c.json({ error: "Transaction not found" }, 404);
 

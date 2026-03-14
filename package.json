@@ -13,5 +13,11 @@
 		"build": "npm run build:web && npm run build:api",
 		"start:api": "npm --workspace apps/api run start",
 		"lint:web": "npm --workspace apps/web run lint"
+	},
+	"devDependencies": {
+		"drizzle-orm": "^0.45.1"
+	},
+	"dependencies": {
+		"pg": "^8.20.0"
 	}
 }

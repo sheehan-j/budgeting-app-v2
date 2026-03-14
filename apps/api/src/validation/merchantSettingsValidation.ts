@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-export const merchantSettingsQuerySchema = z.object({
-	userId: z.string().uuid(),
-});
-
 export const merchantSettingIdParamsSchema = z.object({
 	id: z.coerce.number().int().positive(),
 });
@@ -13,5 +9,4 @@ export const saveMerchantSettingBodySchema = z.object({
 	text: z.string().trim().min(1),
 	type: z.enum(["contains", "equals"]),
 	categoryName: z.string().trim().min(1),
-	userId: z.string().uuid(),
 });

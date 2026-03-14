@@ -17,10 +17,8 @@ const Spending = () => {
 	}));
 
 	const { data: categories, isLoading: categoriesLoading, isFetching: categoriesFetching } = useCategoriesQuery();
-	const { data: spending, isLoading: spendingLoading, isFetching: spendingFetching } = useYearlySpendingQuery(
-		"b82387f7-9d75-4711-91c9-e7558fff4dc6",
-		spendingYear,
-	);
+	const { data: spending, isLoading: spendingLoading, isFetching: spendingFetching } =
+		useYearlySpendingQuery(spendingYear);
 
   const loading = !categories || !spending || categoriesLoading || spendingLoading || categoriesFetching || spendingFetching;
 
