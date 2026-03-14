@@ -13,9 +13,7 @@ export const useUpdateTransactionsIgnoredMutation = () => {
 		mutationFn: async ({ transactionIds, ignored }: UpdateTransactionsIgnoredVariables) => {
 			return setTransactionsIgnored(transactionIds, ignored);
 		},
-		onSuccess: async (success) => {
-			if (!success) return;
-
+		onSuccess: async () => {
 			await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["yearlySpending"] }),

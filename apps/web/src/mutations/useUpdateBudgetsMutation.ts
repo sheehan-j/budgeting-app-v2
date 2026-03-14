@@ -1,26 +1,28 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { authClient } from "../lib/authClient";
 import { updateBudget, type CategoryBudget } from "../util/apiQueries";
 import { getBudgetsQueryKey } from "../queries/budgetsQueryKey";
 
 type UpdateBudgetsVariables = {
 	budgets: CategoryBudget[];
-	userId: string;
 	month: number | string;
 	year: number | string;
 };
 
 export const useUpdateBudgetsMutation = () => {
+	const { data: session } = authClient.useSession();
+	const userId = session?.user?.id;
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({ budgets, userId, month, year }: UpdateBudgetsVariables) => {
-			return updateBudget(budgets, userId, month, year);
+		mutationFn: async ({ budgets, month, year }: UpdateBudgetsVariables) => {
+			return updateBudget(budgets, month, year);
 		},
 		onSuccess: async (updatedBudgets, variables) => {
-			if (!updatedBudgets) return;
+			if (!userId) return;
 
 			queryClient.setQueryData(
-				getBudgetsQueryKey(variables.userId, variables.month, variables.year),
+				getBudgetsQueryKey(userId, variables.month, variables.year),
 				updatedBudgets,
 			);
 		},

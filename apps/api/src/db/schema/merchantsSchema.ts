@@ -1,4 +1,4 @@
-import { bigint, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { bigint, pgTable, text } from "drizzle-orm/pg-core";
 import { categories } from "./categoriesSchema.js";
 
 export const merchants = pgTable("merchants", {
@@ -8,6 +8,6 @@ export const merchants = pgTable("merchants", {
 	categoryName: text("categoryName")
 		.notNull()
 		.references(() => categories.name, { onUpdate: "cascade" }),
-	userId: uuid("userId").notNull(),
+	userId: text("userId").notNull(),
 });
 

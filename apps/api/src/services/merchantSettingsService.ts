@@ -11,7 +11,6 @@ const normalizeMerchantSetting = ({ merchant, category }: MerchantSettingRow) =>
 	id: merchant.id,
 	text: merchant.text,
 	type: merchant.type,
-	userId: merchant.userId,
 	category,
 });
 
@@ -20,11 +19,11 @@ export const getMerchantSettings = async (userId: string) => {
 	return rows.map(normalizeMerchantSetting);
 };
 
-export const saveMerchantSetting = async (input: MerchantSettingInput) => {
-	return saveMerchantSettingRow(input);
+export const saveMerchantSetting = async (input: MerchantSettingInput, userId: string) => {
+	return saveMerchantSettingRow(input, userId);
 };
 
-export const deleteMerchantSetting = async (id: number) => {
-	return deleteMerchantSettingRow(id);
+export const deleteMerchantSetting = async (id: number, userId: string) => {
+	return deleteMerchantSettingRow(id, userId);
 };
 

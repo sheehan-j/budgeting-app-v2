@@ -29,14 +29,12 @@ const TransactionTable = () => {
 	const [page, setPage] = useState(0);
 	const pageSize = 20;
 
-	const userId = "b82387f7-9d75-4711-91c9-e7558fff4dc6";
-
 	const { data: categories, isLoading: categoriesLoading } = useCategoriesQuery();
 	const {
 		data: dashboardData,
 		isLoading: dashboardDataLoading,
 		isFetching: dashboardDataFetching,
-	} = useDashboardQuery(userId, filters);
+	} = useDashboardQuery(filters);
 	const updateTransactionCategoryMutation = useUpdateTransactionsCategoryMutation();
 
 	// Memoize transaction from cache, pagedTransactions to store current page, and selectedTransaction based on selectedTransactionIds
@@ -275,7 +273,6 @@ const TransactionTable = () => {
 										>
 											<TransactionTableCategoryButton
 												transaction={transaction}
-												userId={userId}
 												filters={filters}
 												categories={categories}
 												categoriesLoading={categoriesLoading}

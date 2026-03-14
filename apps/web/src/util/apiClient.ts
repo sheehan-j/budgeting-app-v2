@@ -5,7 +5,7 @@ type RequestOptions<TBody> = {
 	query?: QueryParams;
 };
 
-const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
 const apiBaseUrl = rawApiBaseUrl.replace(/\/$/, "");
 
 const buildUrl = (path: string, query?: QueryParams) => {
@@ -29,6 +29,7 @@ const request = async <TResponse, TBody = unknown>(
 ): Promise<TResponse> => {
 	const response = await fetch(buildUrl(path, query), {
 		method,
+		credentials: "include",
 		headers: {
 			"Content-Type": "application/json",
 		},

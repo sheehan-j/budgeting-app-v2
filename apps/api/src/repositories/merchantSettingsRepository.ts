@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { categories } from "../db/schema/categoriesSchema.js";
 import { merchants } from "../db/schema/merchantsSchema.js";
@@ -16,12 +16,15 @@ export const getMerchantSettingsRows = async (userId: string) => {
 		.orderBy(asc(merchants.id));
 };
 
-export const saveMerchantSettingRow = async ({ id, text, type, categoryName, userId }: MerchantSettingInput) => {
+export const saveMerchantSettingRow = async (
+	{ id, text, type, categoryName }: MerchantSettingInput,
+	userId: string,
+) => {
 	if (id !== undefined) {
 		const result = await db
 			.update(merchants)
-			.set({ text, type, categoryName, userId })
-			.where(eq(merchants.id, id))
+			.set({ text, type, categoryName })
+			.where(and(eq(merchants.id, id), eq(merchants.userId, userId)))
 			.returning();
 
 		return result[0] ?? null;
@@ -32,8 +35,11 @@ export const saveMerchantSettingRow = async ({ id, text, type, categoryName, use
 	return result[0] ?? null;
 };
 
-export const deleteMerchantSettingRow = async (id: number) => {
-	const result = await db.delete(merchants).where(eq(merchants.id, id)).returning();
+export const deleteMerchantSettingRow = async (id: number, userId: string) => {
+	const result = await db
+		.delete(merchants)
+		.where(and(eq(merchants.id, id), eq(merchants.userId, userId)))
+		.returning();
 	return result[0] ?? null;
 };
 

@@ -9,9 +9,6 @@ const MerchantSettingsItemCreate = ({ loading, setLoading, categories, merchantS
 		setEditingMerchantSetting: state.setEditingMerchantSetting,
 		setNotification: state.setNotification,
 	}));
-
-	const userId = "b82387f7-9d75-4711-91c9-e7558fff4dc6";
-
 	const upsertMerchantSettingMutation = useUpsertMerchantSettingMutation();
 
 	const onClickSave = async () => {
@@ -33,7 +30,6 @@ const MerchantSettingsItemCreate = ({ loading, setLoading, categories, merchantS
 		const newMerchantSetting = {
 			...editingMerchantSetting,
 			categoryName: editingMerchantSetting.category.name,
-			userId: userId,
 		};
 		delete newMerchantSetting.category;
 		delete newMerchantSetting.id;

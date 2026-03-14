@@ -1,22 +1,22 @@
 import PropTypes from "prop-types";
 import NavItem from "./NavItem";
-// import { useDataStore } from "../../util/dataStore";
+import { useDataStore } from "../../util/dataStore";
+import { authClient } from "../../lib/authClient";
 
 const Navbar = ({ activePage }) => {
-	// const { setNotification } = useDataStore((state) => ({
-	// 	setNotification: state.setNotification,
-	// }));
+	const { setNotification } = useDataStore((state) => ({
+		setNotification: state.setNotification,
+	}));
 
-	// const handleLogout = async () => {
-	// 	const { error } = await supabase.auth.signOut();
-	// 	if (error) {
-	// 		setNotification({ message: error.message, type: "error" });
-	// 		return;
-	// 	}
-	// 	localStorage.clear();
-	// 	window.location.reload();
-	// 	window.location = "/";
-	// };
+	const handleLogout = async () => {
+		await authClient.signOut({
+			fetchOptions: {
+				onError: (ctx) => {
+					setNotification({ message: ctx.error.message, type: "error" });
+				},
+			},
+		});
+	};
 
 	return (
 		<nav className="h-full shrink-0 w-4/12 md:w-3/12 xl:w-[18%] 2xl:w-2/12 bg-white flex flex-col justify-between gap-5">
@@ -53,7 +53,7 @@ const Navbar = ({ activePage }) => {
 			</div>
 			<div className="border-t border-slate-300 px-6 pb-10 pt-5">
 				<button
-					// onClick={handleLogout}
+					onClick={handleLogout}
 					className="bg-white hover:cursor-pointer hover:bg-slate-50 border border-slate-100 w-full flex items-center gap-3.5 py-3 px-4 rounded-lg"
 				>
 					<div className="w-7 h-7">

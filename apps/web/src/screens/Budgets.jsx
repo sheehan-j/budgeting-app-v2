@@ -16,13 +16,11 @@ const Budgets = () => {
 		setBudgetsYear: state.setBudgetsYear,
 		setNotification: state.setNotification,
 	}));
-
-	const userId = "b82387f7-9d75-4711-91c9-e7558fff4dc6";
 	const {
 		data: budgets,
 		isLoading: budgetsLoading,
 		isFetching: budgetsFetching,
-	} = useBudgetsQuery(userId, budgetsMonth, budgetsYear);
+	} = useBudgetsQuery(budgetsMonth, budgetsYear);
 
 	const updateBudgetsMutation = useUpdateBudgetsMutation();
 	const [localBudgets, setLocalBudgets] = useState([]);
@@ -49,7 +47,6 @@ const Budgets = () => {
 			updateBudgetsMutation.mutate(
 				{
 					budgets: localBudgets,
-					userId,
 					month: budgetsMonth,
 					year: budgetsYear,
 				},

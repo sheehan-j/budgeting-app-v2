@@ -8,9 +8,7 @@ export const useUpsertMerchantSettingMutation = () => {
 		mutationFn: async (merchantSetting: MerchantSetting) => {
 			return upsertMerchantSetting(merchantSetting);
 		},
-		onSuccess: async (success) => {
-			if (!success) return;
-
+		onSuccess: async () => {
 			await Promise.all([
 				queryClient.invalidateQueries({ queryKey: ["merchantSettings"] }),
 				queryClient.invalidateQueries({ queryKey: ["dashboard"] }),

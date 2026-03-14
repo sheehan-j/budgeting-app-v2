@@ -5,12 +5,10 @@ export const useApplyMerchantSettingsMutation = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (userId: string) => {
-			return applyMerchantSettingsToExistingTransactions(userId);
+		mutationFn: async () => {
+			return applyMerchantSettingsToExistingTransactions();
 		},
-		onSuccess: async (updatedCount) => {
-			if (updatedCount === null) return;
-
+		onSuccess: async () => {
 			await Promise.all([
 				queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
 				queryClient.invalidateQueries({ queryKey: ["yearlySpending"] }),

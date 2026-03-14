@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { defaultFilter } from "../../constants/Filters";
 import { useCurrentDashboardQuery } from "../../queries/useCurrentDashboardQuery";
 import DashboardStatsCategory from "./DashboardStatsCategory";
@@ -11,6 +11,29 @@ const DashboardStats = () => {
 
 	const [showAllCategories, setShowAllCategories] = useState(false);
 	const extraCategoriesRef = useRef(null);
+	const [extraCategoriesHeight, setExtraCategoriesHeight] = useState(0);
+
+	useLayoutEffect(() => {
+		if (!extraCategoriesRef.current) return;
+
+		const measureHeight = () => {
+			setExtraCategoriesHeight(extraCategoriesRef.current?.scrollHeight ?? 0);
+		};
+
+		measureHeight();
+
+		if (typeof ResizeObserver !== "undefined") {
+			const resizeObserver = new ResizeObserver(() => {
+				measureHeight();
+			});
+
+			resizeObserver.observe(extraCategoriesRef.current);
+			return () => resizeObserver.disconnect();
+		}
+
+		window.addEventListener("resize", measureHeight);
+		return () => window.removeEventListener("resize", measureHeight);
+	}, [dashboardStats?.categories]);
 
 	return (
 		<div className="w-full flex gap-3">
@@ -100,7 +123,7 @@ const DashboardStats = () => {
 						</div>
 					</>
 				)}
-				{!showInitialLoadingState && (
+				{!showInitialLoadingState && dashboardStats && (
 					<>
 						<div className="flex justify-between items-center text-lg font-semibold mb-1.5">
 							{/* TOP CATEGORIES LABEL */}
@@ -126,38 +149,21 @@ const DashboardStats = () => {
 						<div className="flex flex-col">
 							{/* TOP 3 CATEGORIES (ALWAYS DISPLAYED) */}
 							{dashboardStats?.categories?.slice(0, 3).map((category, index) => (
-								<span key={category.name} className={`${index < 2 || showAllCategories ? "mb-2" : ""}`}>
+								<span key={category.name} className={`${index < 2 ? "mb-2" : ""}`}>
 									<DashboardStatsCategory key={category.name} category={category} />
 								</span>
 							))}
 
 							{/* ANY CATEGORIES BEYOND THE TOP 3 (HIDDEN BY DEFAULT) */}
-							<div className="overflow-hidden">
+							<div
+								className="overflow-hidden transition-[max-height] duration-200"
+								style={{
+									maxHeight: showAllCategories ? `${extraCategoriesHeight}px` : "0px",
+								}}
+							>
 								<div
 									ref={extraCategoriesRef}
-									className={`${
-										showAllCategories
-											? "mt-0"
-											: `mt-[${
-													extraCategoriesRef.current?.scrollHeight
-														? `-${extraCategoriesRef.current.scrollHeight}px`
-														: "-100%"
-													// eslint-disable-next-line no-mixed-spaces-and-tabs
-												}]`
-									} flex flex-col gap-2 transition-[margin] duration-200`}
-									style={{
-										marginTop: showAllCategories
-											? "0"
-											: extraCategoriesRef.current?.scrollHeight
-												? `-${
-														extraCategoriesRef.current.scrollHeight +
-														30 +
-														extraCategoriesRef.current.scrollHeight /
-															dashboardStats?.categories?.length
-														// eslint-disable-next-line no-mixed-spaces-and-tabs
-													}px`
-												: "-100%",
-									}}
+									className="flex flex-col gap-2 pt-2"
 								>
 									{dashboardStats?.categories?.length > 3 && (
 										<>

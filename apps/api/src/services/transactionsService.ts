@@ -1,6 +1,6 @@
 import {
 	deleteTransactionRows,
-	getTransactionsRowCount,
+	getTransactionsRowCountByUser,
 	updateTransactionsCategoryRows,
 	updateTransactionsIgnoredRows,
 	updateTransactionsNotesRows,
@@ -9,26 +9,26 @@ import { getNormalizedTransactions, normalizeTransactions } from "./transactions
 import type { TransactionFilters } from "../types/transactionsTypes.js";
 import { getMerchantSettings } from "./merchantSettingsService.js";
 
-export const getTransactions = async (filters: TransactionFilters = {}) => {
-	return getNormalizedTransactions(filters);
+export const getTransactions = async (userId: string, filters: TransactionFilters = {}) => {
+	return getNormalizedTransactions({ ...filters, userId });
 };
 
-export const getTransactionsCount = async () => {
-	return getTransactionsRowCount();
+export const getTransactionsCount = async (userId: string) => {
+	return getTransactionsRowCountByUser(userId);
 };
 
-export const setTransactionsIgnored = async (ids: number[], ignored: boolean) => {
-	const rows = await updateTransactionsIgnoredRows(ids, ignored);
+export const setTransactionsIgnored = async (ids: number[], ignored: boolean, userId: string) => {
+	const rows = await updateTransactionsIgnoredRows(ids, ignored, userId);
 	return normalizeTransactions(rows);
 };
 
-export const setTransactionCategories = async (ids: number[], categoryName: string) => {
-	const rows = await updateTransactionsCategoryRows(ids, categoryName);
+export const setTransactionCategories = async (ids: number[], categoryName: string, userId: string) => {
+	const rows = await updateTransactionsCategoryRows(ids, categoryName, userId);
 	return normalizeTransactions(rows);
 };
 
-export const setTransactionNotes = async (ids: number[], notes: string | null) => {
-	const rows = await updateTransactionsNotesRows(ids, notes);
+export const setTransactionNotes = async (ids: number[], notes: string | null, userId: string) => {
+	const rows = await updateTransactionsNotesRows(ids, notes, userId);
 	return normalizeTransactions(rows);
 };
 
@@ -59,7 +59,7 @@ export const applyMerchantSettingsToTransactions = async (userId: string) => {
 	}
 
 	for (const [categoryName, ids] of idsByCategoryName.entries()) {
-		await updateTransactionsCategoryRows(ids, categoryName);
+		await updateTransactionsCategoryRows(ids, categoryName, userId);
 	}
 
 	return {
@@ -67,7 +67,7 @@ export const applyMerchantSettingsToTransactions = async (userId: string) => {
 	};
 };
 
-export const deleteTransactions = async (ids: number[]) => {
-	const rows = await deleteTransactionRows(ids);
+export const deleteTransactions = async (ids: number[], userId: string) => {
+	const rows = await deleteTransactionRows(ids, userId);
 	return normalizeTransactions(rows);
 };

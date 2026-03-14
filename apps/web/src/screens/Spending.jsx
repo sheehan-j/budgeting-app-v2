@@ -16,11 +16,11 @@ const Spending = () => {
 		// session: state.session,
 	}));
 
-	const { data: categories, isLoading: categoriesLoading } = useCategoriesQuery();
-	const { data: spending, isLoading: spendingLoading } = useYearlySpendingQuery(
-		"b82387f7-9d75-4711-91c9-e7558fff4dc6",
-		spendingYear,
-	);
+	const { data: categories, isLoading: categoriesLoading, isFetching: categoriesFetching } = useCategoriesQuery();
+	const { data: spending, isLoading: spendingLoading, isFetching: spendingFetching } =
+		useYearlySpendingQuery(spendingYear);
+
+  const loading = !categories || !spending || categoriesLoading || spendingLoading || categoriesFetching || spendingFetching;
 
 	return (
 		<div className="w-screen h-screen flex overflow-hidden relative">
@@ -47,14 +47,14 @@ const Spending = () => {
 						</div>
 					</div>
 
-					{(spendingLoading || categoriesLoading) && (
+					{loading && (
 						<div className="flex grow relative justify-center text-sm text-slate-500 items-center opacity-80">
 							<ButtonSpinner />
 							<div className="mt-16">Loading spending data...</div>
 						</div>
 					)}
 
-					{!spendingLoading && !categoriesLoading && (
+					{!loading && (
 						<div className="flex items-center grow">
 							<div className="flex grow h-full px-5 overflow-x-auto pb-2">
 								{/* FIRST COLUMN WITH CATEGORY NAMES */}
