@@ -4,7 +4,7 @@ import { pool } from "../db/index.js";
 const healthRoutes = new Hono();
 
 healthRoutes.get("/", (c) => {
-  return c.json({ ok: true, message: "github deployment test flow" });
+  return c.json({ ok: true });
 });
 
 healthRoutes.get("/db", async (c) => {
