@@ -114,7 +114,7 @@ const TransactionTable = () => {
 							</>
 						)}
 						<span className="text-lg text-slate-600 font-semibold flex justify-start items-center">
-							github deployment test
+							Transactions
 						</span>
 					</div>
 					<div className="flex gap-2">
