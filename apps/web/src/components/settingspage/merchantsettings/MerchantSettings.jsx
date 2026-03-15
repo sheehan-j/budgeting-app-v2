@@ -27,6 +27,8 @@ const MerchantSettings = () => {
 	const { data: categories, isLoading: categoriesLoading } = useCategoriesQuery();
 	const { data: merchantSettings, isLoading: merchantSettingsLoading } = useMerchantSettingsQuery();
 	const applyMerchantSettingsMutation = useApplyMerchantSettingsMutation();
+	const filteredMerchantSettings =
+		merchantSettings?.filter((m) => m.text.toLowerCase().includes(merchantSearch.toLowerCase())) ?? [];
 
   useEffect(() => {
     if (scrollToNewMerchantSetting) {
@@ -111,9 +113,7 @@ const MerchantSettings = () => {
 									{"No merchants saved :("}
 								</div>
 							)}
-							{merchantSettings
-								?.filter((m) => m.text.toLowerCase().includes(merchantSearch.toLowerCase()))
-								.map((item, index) => (
+							{filteredMerchantSettings.map((item, index) => (
 									<MerchantSettingsItem
 										merchantSettings={merchantSettings}
 										key={index}
@@ -123,9 +123,7 @@ const MerchantSettings = () => {
 										categories={categories}
 									/>
 								))}
-							{merchantSettings?.filter((m) =>
-								m.text.toLowerCase().includes(merchantSearch.toLowerCase()),
-							).length === 0 && (
+							{merchantSettings?.length > 0 && filteredMerchantSettings.length === 0 && (
 								<div className="w-full border border-slate-300 rounded flex justify-center items-center py-3">
 									{"No search results found :("}
 								</div>
