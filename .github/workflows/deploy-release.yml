@@ -35,7 +35,13 @@ jobs:
             cd /opt/stacks/budgeting-app
             docker compose up -d --build
 
-            export DATABASE_URL='postgres://budgeting:${{ secrets.POSTGRES_PASSWORD }}@127.0.0.1:5433/budgeting'
+            export PGHOST=127.0.0.1
+            export PGPORT=5433
+            export PGDATABASE=budgeting
+            export PGUSER=budgeting
+            export PGPASSWORD='${{ secrets.POSTGRES_PASSWORD }}'
+            test -n "$PGPASSWORD"
+            export DATABASE_URL="postgresql://$PGUSER@$PGHOST:$PGPORT/$PGDATABASE"
             cd /home/jsheehan/budgeting-app-v2/apps/api
             # Apply only committed migrations; new schema changes still need a generated migration checked into git.
             npx drizzle-kit migrate
