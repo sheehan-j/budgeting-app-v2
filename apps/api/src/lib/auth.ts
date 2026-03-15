@@ -2,6 +2,14 @@ import { betterAuth } from "better-auth";
 import type { Context } from "hono";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db/index.js";
+import { createAuthMiddleware, APIError } from "better-auth/api";
+
+const signupWhitelist = new Set(
+  (process.env.EMAIL_WHITELIST ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
+);
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
@@ -12,6 +20,19 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 	},
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-up/email") return;
+      if (!(process.env.WHITELIST_ENABLED ?? true)) return;
+      
+      const email = ctx.body?.email?.trim().toLowerCase();
+      if (!email || !signupWhitelist.has(email)) {
+        throw new APIError("FORBIDDEN", {
+          message: "This email is not whitelisted for signup. Please contact jordansheehan26@gmail.com if you're interested in signing up."
+        })
+      }
+    })
+  }
 });
 
 type AuthSession = NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>;
