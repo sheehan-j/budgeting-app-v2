@@ -28,9 +28,9 @@ jobs:
             npm ci
             npm run build:web
 
-            sudo mkdir -p /var/www/budgeting-app
-            sudo cp -r apps/web/dist/* /var/www/budgeting-app/
-            sudo cp docker-compose.yml /opt/stacks/budgeting-app/compose.yaml
+            mkdir -p /var/www/budgeting-app
+            cp -r apps/web/dist/* /var/www/budgeting-app/
+            cp docker-compose.yml /opt/stacks/budgeting-app/compose.yaml
 
             cd /opt/stacks/budgeting-app
             docker compose up -d --build
