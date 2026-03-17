@@ -166,7 +166,7 @@ transactionsRoutes.patch("/:id/notes", async (c) => {
 
 transactionsRoutes.post("/import/capital-one", async (c) => {
 	try {
-		if ((process.env.IMPORTED_ENABLED ?? "false").toString() === "false")
+		if (!(String(process.env.IMPORT_ENABLED ?? "").toLowerCase() === "true"))
 			return c.json({ error: "This feature is disabled" }, 403);
 
 		const user = getAuthenticatedUser(c);
