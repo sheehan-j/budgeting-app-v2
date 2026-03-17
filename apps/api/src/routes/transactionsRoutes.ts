@@ -6,6 +6,7 @@ import {
 	deleteTransactions,
 	getTransactions,
 	getTransactionsCount,
+	importCapitalOneCsvTransactions,
 	setTransactionCategories,
 	setTransactionNotes,
 	setTransactionsIgnored,
@@ -14,6 +15,7 @@ import {
 	applyMerchantSettingsBodySchema,
 	deleteTransactionsBodySchema,
 	getTransactionsQuerySchema,
+	importCapitalOneCsvBodySchema,
 	transactionIdParamsSchema,
 	updateTransactionNotesBodySchema,
 	updateTransactionsCategoryBodySchema,
@@ -159,6 +161,30 @@ transactionsRoutes.patch("/:id/notes", async (c) => {
 	} catch (error) {
 		console.error(error);
 		return c.json({ error: "Failed to update transaction notes" }, 500);
+	}
+});
+
+transactionsRoutes.post("/import/capital-one", async (c) => {
+	try {
+		if ((process.env.IMPORTED_ENABLED ?? "false").toString() === "false")
+			return c.json({ error: "This feature is disabled" }, 403);
+
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
+		const bodyResult = importCapitalOneCsvBodySchema.safeParse(await c.req.json());
+		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
+
+		const result = await importCapitalOneCsvTransactions(bodyResult.data, user.id);
+		return c.json({ ok: true, ...result });
+	} catch (error) {
+		console.error(error);
+		return c.json(
+			{
+				error: error instanceof Error ? error.message : "Failed to import Capital One CSV transactions",
+			},
+			400,
+		);
 	}
 });
 

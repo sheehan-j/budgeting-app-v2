@@ -6,10 +6,12 @@ import { loadPlaidLink } from "../../../util/loadPlaidLink";
 import { usePlaidItemsQuery } from "../../../queries/usePlaidItemsQuery";
 import { useExchangePlaidPublicTokenMutation } from "../../../mutations/useExchangePlaidPublicTokenMutation";
 import { useCompletePlaidUpdateModeMutation } from "../../../mutations/useCompletePlaidUpdateModeMutation";
+import { useImportCapitalOneCsvMutation } from "../../../mutations/useImportCapitalOneCsvMutation";
 import { useSyncAllPlaidItemsMutation } from "../../../mutations/useSyncAllPlaidItemsMutation";
 import { formatPlaidSyncSuccessNotification } from "../../../util/plaidUtil";
 
 const PLAID_LINK_SESSION_STORAGE_KEY = "plaid_link_session";
+const IMPORT_ENABLED = String(import.meta.env.VITE_IMPORT_ENABLED ?? "").toLowerCase() === "true";
 
 const formatDateTime = (value) => {
 	if (!value) return "Never";
@@ -41,6 +43,33 @@ const formatUpdateModeSummary = (institutionName, sync) =>
 	`${institutionName ?? "Institution"} updated. ${
 		sync ? formatSyncSummary(sync) : "Changes will appear after the next sync."
 	}`;
+
+const formatIsoDateLabel = (value) => {
+	if (!value) return null;
+
+	const [year, month, day] = value.split("-");
+	if (!year || !month || !day) return value;
+
+	return `${month}/${day}/${year}`;
+};
+
+const formatCapitalOneImportSummary = (response) => {
+	const parts = [`${response.insertedCount} imported`];
+
+	if (response.overlapSkippedCount > 0) {
+		parts.push(`${response.overlapSkippedCount} overlapping skipped`);
+	}
+
+	if (response.duplicateSkippedCount > 0) {
+		parts.push(`${response.duplicateSkippedCount} duplicates skipped`);
+	}
+
+	const rangeStart = formatIsoDateLabel(response.importedRangeStart);
+	const rangeEnd = formatIsoDateLabel(response.importedRangeEnd);
+	const rangeLabel = rangeStart && rangeEnd ? ` (${rangeStart} - ${rangeEnd})` : "";
+
+	return `${response.accountName}: ${parts.join(", ")}${rangeLabel}.`;
+};
 
 const formatPlaidExitMessage = (error, metadata) => {
 	const requestId = metadata?.request_id || error?.request_id;
@@ -112,15 +141,22 @@ const PlaidConnections = () => {
 	const [startingFlow, setStartingFlow] = useState(false); // Track when the Plaid flow has started
 	const [resumingFlow, setResumingFlow] = useState(false); // Track when the Plaid flow has resumed after OAuth redirect
 	const [updatingItemId, setUpdatingItemId] = useState(null);
+	const [uploadingAccountId, setUploadingAccountId] = useState(null);
 	const handlerRef = useRef(null);
 	const linkSessionRef = useRef(null);
+	const fileInputRefs = useRef({});
 
 	const { data: plaidItems, isLoading } = usePlaidItemsQuery();
 	const exchangeMutation = useExchangePlaidPublicTokenMutation();
 	const completeUpdateModeMutation = useCompletePlaidUpdateModeMutation();
+	const importCapitalOneCsvMutation = useImportCapitalOneCsvMutation();
 	const syncAllMutation = useSyncAllPlaidItemsMutation();
 	const isPlaidBusy =
-		startingFlow || resumingFlow || exchangeMutation.isPending || completeUpdateModeMutation.isPending;
+		startingFlow ||
+		resumingFlow ||
+		exchangeMutation.isPending ||
+		completeUpdateModeMutation.isPending ||
+		importCapitalOneCsvMutation.isPending;
 
 	// Remove oauth_state_id from URL and remove stored Plaid link from local storage
 	const cleanupOauthRedirect = () => {
@@ -373,6 +409,59 @@ const PlaidConnections = () => {
 		});
 	};
 
+	const handleImportCapitalOneCsvClick = (accountId) => {
+		if (isPlaidBusy) return;
+
+		fileInputRefs.current[accountId]?.click();
+	};
+
+	const handleImportCapitalOneCsvFile = async (item, account, event) => {
+		const input = event.target;
+		const file = input.files?.[0];
+		input.value = "";
+
+		if (!file || importCapitalOneCsvMutation.isPending) return;
+
+		setUploadingAccountId(account.id);
+
+		try {
+			const csvText = await file.text();
+
+			importCapitalOneCsvMutation.mutate(
+				{
+					itemId: item.id,
+					accountId: account.id,
+					csvText,
+					fileName: file.name,
+				},
+				{
+					onSuccess: (response) => {
+						setNotification({
+							type: "success",
+							message: formatCapitalOneImportSummary(response),
+						});
+					},
+					onError: (error) => {
+						setNotification({
+							type: "error",
+							message:
+								error instanceof Error ? error.message : "Could not import Capital One transactions.",
+						});
+					},
+					onSettled: () => {
+						setUploadingAccountId(null);
+					},
+				},
+			);
+		} catch (error) {
+			setUploadingAccountId(null);
+			setNotification({
+				type: "error",
+				message: error instanceof Error ? error.message : "Could not read this CSV file.",
+			});
+		}
+	};
+
 	const connectedAccountsCount =
 		plaidItems?.reduce((count, item) => count + item.accounts.filter((account) => account.isActive).length, 0) ?? 0;
 
@@ -450,6 +539,7 @@ const PlaidConnections = () => {
 					<div className="flex flex-col gap-4">
 						{plaidItems.map((item) => {
 							const activeAccounts = item.accounts.filter((account) => account.isActive);
+							const supportsCapitalOneCsvImport = /capital one/i.test(item.institutionName ?? "");
 							const isUpdatingThisItem = updatingItemId === item.id;
 							const isItemActionDisabled = isPlaidBusy || isUpdatingThisItem;
 
@@ -518,14 +608,66 @@ const PlaidConnections = () => {
 																{account.mask ? ` | ****${account.mask}` : ""}
 															</div>
 														</div>
-														<div
-															className={`text-xs rounded-full px-2 py-1 ${
-																account.isActive
-																	? "bg-cGreen-lighter text-cGreen-dark"
-																	: "bg-slate-200 text-slate-500"
-															}`}
-														>
-															{account.isActive ? "Active" : "Inactive"}
+														<div className="flex items-center gap-2">
+															{supportsCapitalOneCsvImport &&
+																account.isActive &&
+																IMPORT_ENABLED && (
+																	<>
+																		<input
+																			ref={(node) => {
+																				if (node) {
+																					fileInputRefs.current[account.id] =
+																						node;
+																				} else {
+																					delete fileInputRefs.current[
+																						account.id
+																					];
+																				}
+																			}}
+																			type="file"
+																			accept=".csv,text/csv"
+																			className="hidden"
+																			onChange={(event) =>
+																				handleImportCapitalOneCsvFile(
+																					item,
+																					account,
+																					event,
+																				)
+																			}
+																		/>
+																		<button
+																			onClick={() =>
+																				handleImportCapitalOneCsvClick(
+																					account.id,
+																				)
+																			}
+																			disabled={isPlaidBusy}
+																			className="relative border border-slate-300 rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+																		>
+																			<span
+																				className={
+																					uploadingAccountId === account.id
+																						? "opacity-0"
+																						: ""
+																				}
+																			>
+																				Import CSV
+																			</span>
+																			{uploadingAccountId === account.id && (
+																				<ButtonSpinner />
+																			)}
+																		</button>
+																	</>
+																)}
+															<div
+																className={`text-xs rounded-full px-2 py-1 ${
+																	account.isActive
+																		? "bg-cGreen-lighter text-cGreen-dark"
+																		: "bg-slate-200 text-slate-500"
+																}`}
+															>
+																{account.isActive ? "Active" : "Inactive"}
+															</div>
 														</div>
 													</div>
 												</div>

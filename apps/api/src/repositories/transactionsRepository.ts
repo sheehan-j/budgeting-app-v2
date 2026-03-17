@@ -2,7 +2,7 @@ import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { transactions } from "../db/schema/transactionsSchema.js";
 import { encryptTransactionField } from "../lib/transactionFieldCrypto.js";
-import type { TransactionFilters } from "../types/transactionsTypes.js";
+import type { InsertImportedTransactionInput, TransactionFilters } from "../types/transactionsTypes.js";
 import type { UpsertPlaidTransactionInput } from "../types/plaidTypes.js";
 
 type TransactionRow = typeof transactions.$inferSelect;
@@ -39,6 +39,20 @@ export const getTransactionsRowCountByUser = async (userId: string) => {
 		.from(transactions)
 		.where(and(eq(transactions.userId, userId), isNull(transactions.removedAt)));
 	return result[0]?.count ?? 0;
+};
+
+export const getTransactionsRowsByPlaidAccount = async (plaidAccountId: number, userId: string) => {
+	return db
+		.select()
+		.from(transactions)
+		.where(
+			and(
+				eq(transactions.userId, userId),
+				eq(transactions.plaidAccountId, plaidAccountId),
+				isNull(transactions.removedAt),
+			),
+		)
+		.orderBy(desc(transactions.date), desc(transactions.id));
 };
 
 export const upsertPlaidTransactionsRows = async (values: UpsertPlaidTransactionInput[]) => {
@@ -128,5 +142,19 @@ export const deleteTransactionRows = async (ids: number[], userId: string) => {
 	return db
 		.delete(transactions)
 		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
+		.returning();
+};
+
+export const insertImportedTransactionsRows = async (values: InsertImportedTransactionInput[]) => {
+	if (values.length === 0) return [];
+
+	return db
+		.insert(transactions)
+		.values(
+			values.map((value) => ({
+				...value,
+				rawMerchantName: value.rawMerchantName ? encryptTransactionField(value.rawMerchantName) : null,
+			})),
+		)
 		.returning();
 };

@@ -211,6 +211,17 @@ type SyncAllPlaidItemsResponse = {
 	items: PlaidSyncSummary[];
 };
 
+type ImportCapitalOneCsvResponse = {
+	ok: boolean;
+	institutionName: string | null;
+	accountName: string;
+	insertedCount: number;
+	duplicateSkippedCount: number;
+	overlapSkippedCount: number;
+	importedRangeStart: string | null;
+	importedRangeEnd: string | null;
+};
+
 type OkResponse = {
 	ok: boolean;
 };
@@ -524,6 +535,34 @@ export const syncAllPlaidItems = async (): Promise<PlaidSyncSummary[]> => {
 	}
 };
 
+export const importCapitalOneCsv = async (
+	itemId: number,
+	accountId: number,
+	csvText: string,
+	fileName?: string,
+): Promise<ImportCapitalOneCsvResponse> => {
+	try {
+		return await apiClient.post<
+			ImportCapitalOneCsvResponse,
+			{
+				itemId: number;
+				accountId: number;
+				csvText: string;
+				fileName?: string;
+			}
+		>("/transactions/import/capital-one", {
+			itemId,
+			accountId,
+			csvText,
+			fileName,
+		});
+	} catch (error) {
+		return throwWithMessage(
+			error instanceof Error ? error.message : "Could not import Capital One transactions.",
+		);
+	}
+};
+
 export type {
 	Transaction,
 	Category,
@@ -532,6 +571,7 @@ export type {
 	PlaidAccount,
 	PlaidItem,
 	PlaidSyncSummary,
+	ImportCapitalOneCsvResponse,
 	DashboardFilter,
 	DashboardStats,
 	DashboardResponse,
