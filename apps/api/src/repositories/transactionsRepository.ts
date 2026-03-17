@@ -1,10 +1,13 @@
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { transactions } from "../db/schema/transactionsSchema.js";
 import type { TransactionFilters } from "../types/transactionsTypes.js";
+import type { UpsertPlaidTransactionInput } from "../types/plaidTypes.js";
+
+type TransactionRow = typeof transactions.$inferSelect;
 
 export const getTransactionsRows = async ({ month, year, limit, userId }: TransactionFilters = {}) => {
-	const conditions = [];
+	const conditions = [isNull(transactions.removedAt)];
 	if (month !== undefined) conditions.push(eq(transactions.month, month));
 	if (year !== undefined) conditions.push(eq(transactions.year, year));
 	if (userId !== undefined) conditions.push(eq(transactions.userId, userId));
@@ -22,7 +25,10 @@ export const getTransactionsRows = async ({ month, year, limit, userId }: Transa
 };
 
 export const getTransactionsRowCount = async () => {
-	const result = await db.select({ count: count() }).from(transactions);
+	const result = await db
+		.select({ count: count() })
+		.from(transactions)
+		.where(isNull(transactions.removedAt));
 	return result[0]?.count ?? 0;
 };
 
@@ -30,8 +36,60 @@ export const getTransactionsRowCountByUser = async (userId: string) => {
 	const result = await db
 		.select({ count: count() })
 		.from(transactions)
-		.where(eq(transactions.userId, userId));
+		.where(and(eq(transactions.userId, userId), isNull(transactions.removedAt)));
 	return result[0]?.count ?? 0;
+};
+
+export const upsertPlaidTransactionsRows = async (values: UpsertPlaidTransactionInput[]) => {
+	if (values.length === 0) return [];
+
+	return db.transaction(async (tx) => {
+		const rows: TransactionRow[] = [];
+
+		for (const value of values) {
+			const result = await tx
+				.insert(transactions)
+				.values(value)
+				.onConflictDoUpdate({
+					target: transactions.plaidTransactionId,
+					set: {
+						date: value.date,
+						amount: value.amount,
+						merchant: value.merchant,
+						configurationName: value.configurationName,
+						month: value.month,
+						day: value.day,
+						year: value.year,
+						plaidItemId: value.plaidItemId,
+						plaidAccountId: value.plaidAccountId,
+						rawMerchantName: value.rawMerchantName,
+						authorizedDate: value.authorizedDate,
+						isoCurrencyCode: value.isoCurrencyCode,
+						pending: value.pending,
+						removedAt: null,
+					},
+				})
+				.returning();
+
+			if (result[0]) rows.push(result[0]);
+		}
+
+		return rows;
+	});
+};
+
+export const markPlaidTransactionsRemovedRows = async (
+	plaidTransactionIds: string[],
+	userId: string,
+	removedAt = new Date(),
+) => {
+	if (plaidTransactionIds.length === 0) return [];
+
+	return db
+		.update(transactions)
+		.set({ removedAt })
+		.where(and(inArray(transactions.plaidTransactionId, plaidTransactionIds), eq(transactions.userId, userId)))
+		.returning();
 };
 
 export const updateTransactionsIgnoredRows = async (ids: number[], ignored: boolean, userId: string) => {

@@ -9,6 +9,7 @@ import categoriesRoutes from "./routes/categoriesRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import merchantSettingsRoutes from "./routes/merchantSettingsRoutes.js";
+import plaidRoutes from "./routes/plaidRoutes.js";
 import transactionsRoutes from "./routes/transactionsRoutes.js";
 
 const api = new Hono<AppBindings>();
@@ -24,7 +25,15 @@ api.use(
 api.on(["POST", "GET"], "/auth/*", (c) => auth.handler(c.req.raw));
 
 api.use("*", async (c, next) => {
-	if (c.req.path.startsWith("/api/auth/")) {
+	const requestPath = c.req.path;
+
+  // Exempt Plaid webhook from auth lookup so Plaid can post to it
+	if (
+		requestPath.startsWith("/api/auth/") ||
+		requestPath.startsWith("/auth/") ||
+		requestPath === "/api/plaid/webhook" ||
+		requestPath === "/plaid/webhook"
+	) {
 		await next();
 		return;
 	}
@@ -42,6 +51,7 @@ api.route("/categories", categoriesRoutes);
 api.route("/merchants", merchantSettingsRoutes);
 api.route("/budgets", budgetsRoutes);
 api.route("/dashboard", dashboardRoutes);
+api.route("/plaid", plaidRoutes);
 
 const app = new Hono();
 app.route("/api", api);

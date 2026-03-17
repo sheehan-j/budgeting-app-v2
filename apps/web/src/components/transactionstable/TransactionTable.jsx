@@ -3,6 +3,8 @@ import { useDataStore } from "../../util/dataStore";
 import { useDashboardQuery } from "../../queries/useDashboardQuery";
 import { useCategoriesQuery } from "../../queries/useCategoriesQuery";
 import { useUpdateTransactionsCategoryMutation } from "../../mutations/useUpdateTransactionsCategoryMutation";
+import { useSyncAllPlaidItemsMutation } from "../../mutations/useSyncAllPlaidItemsMutation";
+import { formatPlaidSyncSuccessNotification } from "../../util/plaidUtil";
 import { sortTransactions } from "../../util/sortUtil";
 import TransactionMenu from "./TransactionMenu";
 import ButtonSpinner from "../common/ButtonSpinner";
@@ -13,12 +15,13 @@ import Pagination from "./Pagination";
 import BulkActions from "./BulkActions";
 
 const TransactionTable = () => {
-	const { dashboardSortState, setDashboardSortState, filters, setFilters } = useDataStore((state) => ({
+	const { dashboardSortState, setDashboardSortState, filters, setFilters, setNotification } = useDataStore((state) => ({
 		dashboardSortState: state.dashboardSortState,
 		setDashboardSortState: state.setDashboardSortState,
 		totalTransactionCount: state.totalTransactionCount,
 		filters: state.filters,
 		setFilters: state.setFilters,
+		setNotification: state.setNotification,
 	}));
 
 	const tableRef = useRef(null);
@@ -36,6 +39,7 @@ const TransactionTable = () => {
 		isFetching: dashboardDataFetching,
 	} = useDashboardQuery(filters);
 	const updateTransactionCategoryMutation = useUpdateTransactionsCategoryMutation();
+	const syncAllPlaidItemsMutation = useSyncAllPlaidItemsMutation();
 
 	// Memoize transaction from cache, pagedTransactions to store current page, and selectedTransaction based on selectedTransactionIds
 	const transactions = useMemo(() => {
@@ -86,6 +90,16 @@ const TransactionTable = () => {
 		setDashboardSortState(newDashboardSortState);
 	};
 
+	const handleSyncAllPlaidItems = () => {
+		if (syncAllPlaidItemsMutation.isPending) return;
+
+		syncAllPlaidItemsMutation.mutate(undefined, {
+			onSuccess: (items) => {
+				setNotification(formatPlaidSyncSuccessNotification(items))
+			},
+		});
+	};
+
 	return (
 		<div className="relative flex flex-col grow rounded-2xl">
 			{tableLocked && <div className="absolute z-20 backdrop-blur-[0.8px] w-full h-full"></div>}
@@ -119,6 +133,14 @@ const TransactionTable = () => {
 					</div>
 					<div className="flex gap-2">
 						<button
+							onClick={handleSyncAllPlaidItems}
+							disabled={syncAllPlaidItemsMutation.isPending}
+							className="relative border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-normal px-2 py-1 border-slate-300 border rounded disabled:opacity-60 disabled:cursor-not-allowed"
+						>
+							<span className={syncAllPlaidItemsMutation.isPending ? "opacity-0" : ""}>Sync</span>
+							{syncAllPlaidItemsMutation.isPending && <ButtonSpinner />}
+						</button>
+						<button
 							onClick={() => {
 								setShowFilters(!showFilters);
 							}}
@@ -126,12 +148,6 @@ const TransactionTable = () => {
 						>
 							{showFilters ? "Hide Filters" : "Show Filters"}
 						</button>
-						{/* <button
-							onClick={openUploadModal}
-							className="relative font-normal text-slate-600 bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded text-sm py-1 px-3"
-						>
-							Upload
-						</button> */}
 					</div>
 				</div>
 				<div

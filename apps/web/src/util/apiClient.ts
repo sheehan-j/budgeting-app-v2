@@ -6,7 +6,21 @@ type RequestOptions<TBody> = {
 };
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
-const apiBaseUrl = rawApiBaseUrl.replace(/\/$/, "");
+const resolveBaseUrl = (value: string) => {
+	const trimmedValue = value.replace(/\/$/, "");
+
+	if (/^https?:\/\//i.test(trimmedValue)) {
+		return trimmedValue;
+	}
+
+	if (typeof window !== "undefined") {
+		return new URL(trimmedValue, window.location.origin).toString().replace(/\/$/, "");
+	}
+
+	return trimmedValue;
+};
+
+const apiBaseUrl = resolveBaseUrl(rawApiBaseUrl);
 
 const buildUrl = (path: string, query?: QueryParams) => {
 	const url = new URL(`${apiBaseUrl}${path}`);

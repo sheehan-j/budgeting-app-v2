@@ -143,9 +143,60 @@ type MerchantSettingResponse = {
 	merchantSetting: MerchantSetting;
 };
 
+type PlaidAccount = {
+	id: number;
+	plaidAccountId: string;
+	name: string;
+	mask: string | null;
+	type: string;
+	subtype: string | null;
+	isActive: boolean;
+	createdAt: string;
+	updatedAt: string;
+};
+
+type PlaidItem = {
+	id: number;
+	userId: string;
+	plaidItemId: string;
+	institutionId: string | null;
+	institutionName: string | null;
+	cursor: string | null;
+	status: string;
+	lastSyncedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+	accounts: PlaidAccount[];
+};
+
 type ApplyMerchantSettingsResponse = {
 	ok: boolean;
 	updatedCount: number;
+};
+
+type PlaidLinkTokenResponse = {
+	linkToken: string;
+	expiration: string;
+};
+
+type PlaidSyncSummary = {
+	itemId: number;
+	plaidItemId: string;
+	addedCount: number;
+	modifiedCount: number;
+	removedCount: number;
+	cursor: string | null;
+};
+
+type ExchangePlaidPublicTokenResponse = {
+	ok: boolean;
+	item: PlaidItem;
+	sync: PlaidSyncSummary | null;
+};
+
+type SyncAllPlaidItemsResponse = {
+	ok: boolean;
+	items: PlaidSyncSummary[];
 };
 
 type OkResponse = {
@@ -384,11 +435,60 @@ export const applyMerchantSettingsToExistingTransactions = async (): Promise<num
 	}
 };
 
+export const getPlaidItems = async (): Promise<PlaidItem[]> => {
+	try {
+		const plaidItems = await apiClient.get<PlaidItem[]>("/plaid/items");
+		return [...plaidItems].sort((a, b) => a.id - b.id);
+	} catch {
+		return throwWithMessage("Could not fetch connected accounts.");
+	}
+};
+
+export const createPlaidLinkToken = async (): Promise<PlaidLinkTokenResponse> => {
+	try {
+		return await apiClient.post<PlaidLinkTokenResponse, Record<string, never>>("/plaid/link-token", {});
+	} catch {
+		return throwWithMessage("Could not start Plaid Link.");
+	}
+};
+
+export const exchangePlaidPublicToken = async (
+	publicToken: string,
+): Promise<ExchangePlaidPublicTokenResponse> => {
+	try {
+		return await apiClient.post<
+			ExchangePlaidPublicTokenResponse,
+			{
+				publicToken: string;
+			}
+		>("/plaid/exchange-public-token", {
+			publicToken,
+		});
+	} catch {
+		return throwWithMessage("Could not connect this institution.");
+	}
+};
+
+export const syncAllPlaidItems = async (): Promise<PlaidSyncSummary[]> => {
+	try {
+		const response = await apiClient.post<SyncAllPlaidItemsResponse, Record<string, never>>(
+			"/plaid/sync-all",
+			{},
+		);
+		return response.items;
+	} catch {
+		return throwWithMessage("Could not sync connected accounts.");
+	}
+};
+
 export type {
 	Transaction,
 	Category,
 	CategoryBudget,
 	MerchantSetting,
+	PlaidAccount,
+	PlaidItem,
+	PlaidSyncSummary,
 	DashboardFilter,
 	DashboardStats,
 	DashboardResponse,

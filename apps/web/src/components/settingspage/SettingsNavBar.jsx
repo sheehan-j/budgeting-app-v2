@@ -18,16 +18,6 @@ const SettingsNavBar = ({ settings, activeSetting, setActiveSetting }) => {
 						>
 							{setting}
 						</div>
-						// <div
-						// 	key={setting}
-						// 	className={`${
-						// 		activeSetting === setting
-						// 			? "border-cGreen text-cGreen cursor-default"
-						// 			: "border-slate-300 cursor-pointer"
-						// 	} border text-start px-2 py-1 rounded w-full`}
-						// >
-						// 	{setting}
-						// </div>
 					))}
 				</div>
 			</div>

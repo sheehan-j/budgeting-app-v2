@@ -2,6 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { plaidAccounts } from "../db/schema/plaidAccountsSchema.js";
 import { plaidItems } from "../db/schema/plaidItemsSchema.js";
+import { transactions } from "../db/schema/transactionsSchema.js";
 import type { SavePlaidItemRowInput, UpdatePlaidItemSyncInput } from "../types/plaidTypes.js";
 
 const getPlaidItemJoinedRowsForUser = async (userId: string, itemId?: number) => {
@@ -23,32 +24,25 @@ export const getPlaidItemRows = async (userId: string) => {
 	return getPlaidItemJoinedRowsForUser(userId);
 };
 
-export const getPlaidItemRowsById = async (id: number, userId: string) => {
-	return getPlaidItemJoinedRowsForUser(userId, id);
-};
-
-export const getPlaidItemRowById = async (id: number, userId: string) => {
-	const result = await db
-		.select()
-		.from(plaidItems)
-		.where(and(eq(plaidItems.id, id), eq(plaidItems.userId, userId)))
-		.limit(1);
-
-	return result[0] ?? null;
+export const getPlaidItemAccessTokenRows = async (userId: string) => {
+	return db.select().from(plaidItems).where(eq(plaidItems.userId, userId)).orderBy(asc(plaidItems.id));
 };
 
 export const getPlaidItemRowByPlaidItemId = async (plaidItemId: string) => {
-	const result = await db
-		.select()
-		.from(plaidItems)
-		.where(eq(plaidItems.plaidItemId, plaidItemId))
-		.limit(1);
+	const result = await db.select().from(plaidItems).where(eq(plaidItems.plaidItemId, plaidItemId)).limit(1);
 
 	return result[0] ?? null;
 };
 
 export const savePlaidItemWithAccountsRow = async (
-	{ plaidItemId, accessTokenEncrypted, institutionId, institutionName, status = "active", accounts }: SavePlaidItemRowInput,
+	{
+		plaidItemId,
+		accessTokenEncrypted,
+		institutionId,
+		institutionName,
+		status = "active",
+		accounts,
+	}: SavePlaidItemRowInput,
 	userId: string,
 ) => {
 	const itemId = await db.transaction(async (tx) => {
@@ -59,7 +53,7 @@ export const savePlaidItemWithAccountsRow = async (
 			.limit(1);
 		const existingItem = existingItemResult[0] ?? null;
 
-		const persistedItem =
+		const savedItem =
 			existingItem !== null
 				? (
 						await tx
@@ -72,7 +66,7 @@ export const savePlaidItemWithAccountsRow = async (
 							})
 							.where(eq(plaidItems.id, existingItem.id))
 							.returning()
-				  )[0]
+					)[0]
 				: (
 						await tx
 							.insert(plaidItems)
@@ -85,16 +79,16 @@ export const savePlaidItemWithAccountsRow = async (
 								status,
 							})
 							.returning()
-				  )[0];
+					)[0];
 
-		if (!persistedItem) {
+		if (!savedItem) {
 			throw new Error("Failed to persist Plaid item");
 		}
 
 		const existingAccounts = await tx
 			.select()
 			.from(plaidAccounts)
-			.where(eq(plaidAccounts.plaidItemId, persistedItem.id));
+			.where(eq(plaidAccounts.plaidItemId, savedItem.id));
 		const existingAccountsByPlaidAccountId = new Map(
 			existingAccounts.map((account) => [account.plaidAccountId, account]),
 		);
@@ -113,41 +107,53 @@ export const savePlaidItemWithAccountsRow = async (
 						isActive: true,
 					})
 					.where(eq(plaidAccounts.id, existingAccount.id));
-				continue;
+			} else {
+				await tx.insert(plaidAccounts).values({
+					plaidItemId: savedItem.id,
+					plaidAccountId: account.plaidAccountId,
+					name: account.name,
+					mask: account.mask,
+					type: account.type,
+					subtype: account.subtype,
+					isActive: true,
+				});
 			}
-
-			await tx.insert(plaidAccounts).values({
-				plaidItemId: persistedItem.id,
-				plaidAccountId: account.plaidAccountId,
-				name: account.name,
-				mask: account.mask,
-				type: account.type,
-				subtype: account.subtype,
-				isActive: true,
-			});
 		}
 
+		// Check for accounts stored in DB that were not returned by Plaid during this connection
 		const nextPlaidAccountIds = accounts.map((account) => account.plaidAccountId);
-		const accountsToDeactivate = existingAccounts
-			.filter((account) => !nextPlaidAccountIds.includes(account.plaidAccountId))
-			.map((account) => account.plaidAccountId);
+		const accountsToDelete = existingAccounts.filter(
+			(account) => !nextPlaidAccountIds.includes(account.plaidAccountId),
+		);
 
-		if (accountsToDeactivate.length > 0) {
+    // Hard delete deactivated accounts and their associated transactions
+		if (accountsToDelete.length > 0) {
+			const localAccountIdsToDelete = accountsToDelete.map((account) => account.id);
+			const plaidAccountIdsToDelete = accountsToDelete.map((account) => account.plaidAccountId);
+
 			await tx
-				.update(plaidAccounts)
-				.set({ isActive: false })
+				.delete(transactions)
 				.where(
 					and(
-						eq(plaidAccounts.plaidItemId, persistedItem.id),
-						inArray(plaidAccounts.plaidAccountId, accountsToDeactivate),
+						eq(transactions.userId, userId),
+						inArray(transactions.plaidAccountId, localAccountIdsToDelete),
+					),
+				);
+
+			await tx
+				.delete(plaidAccounts)
+				.where(
+					and(
+						eq(plaidAccounts.plaidItemId, savedItem.id),
+						inArray(plaidAccounts.plaidAccountId, plaidAccountIdsToDelete),
 					),
 				);
 		}
 
-		return persistedItem.id;
+		return savedItem.id;
 	});
 
-	return getPlaidItemRowsById(itemId, userId);
+	return getPlaidItemJoinedRowsForUser(userId, itemId);
 };
 
 export const updatePlaidItemSyncRow = async (
