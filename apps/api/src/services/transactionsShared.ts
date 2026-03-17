@@ -1,4 +1,5 @@
 import { getTransactionsRows } from "../repositories/transactionsRepository.js";
+import { decryptTransactionField } from "../lib/transactionFieldCrypto.js";
 import type { TransactionFilters } from "../types/transactionsTypes.js";
 
 // ** This service exists so any service can get normalized transactions
@@ -15,6 +16,9 @@ export type NormalizedTransaction = Omit<TransactionRow, "amount"> & {
 export const normalizeTransaction = (transaction: TransactionRow): NormalizedTransaction => ({
 	...transaction,
 	amount: Number(transaction.amount),
+	rawMerchantName: transaction.rawMerchantName
+		? decryptTransactionField(transaction.rawMerchantName)
+		: null,
 });
 
 export const normalizeTransactions = (transactions: TransactionRow[]): NormalizedTransaction[] => {

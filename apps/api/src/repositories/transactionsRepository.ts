@@ -1,6 +1,7 @@
 import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { transactions } from "../db/schema/transactionsSchema.js";
+import { encryptTransactionField } from "../lib/transactionFieldCrypto.js";
 import type { TransactionFilters } from "../types/transactionsTypes.js";
 import type { UpsertPlaidTransactionInput } from "../types/plaidTypes.js";
 
@@ -47,9 +48,16 @@ export const upsertPlaidTransactionsRows = async (values: UpsertPlaidTransaction
 		const rows: TransactionRow[] = [];
 
 		for (const value of values) {
+			const encryptedRawMerchantName = value.rawMerchantName
+				? encryptTransactionField(value.rawMerchantName)
+				: null;
+
 			const result = await tx
 				.insert(transactions)
-				.values(value)
+				.values({
+					...value,
+					rawMerchantName: encryptedRawMerchantName,
+				})
 				.onConflictDoUpdate({
 					target: transactions.plaidTransactionId,
 					set: {
@@ -62,7 +70,7 @@ export const upsertPlaidTransactionsRows = async (values: UpsertPlaidTransaction
 						year: value.year,
 						plaidItemId: value.plaidItemId,
 						plaidAccountId: value.plaidAccountId,
-						rawMerchantName: value.rawMerchantName,
+						rawMerchantName: encryptedRawMerchantName,
 						authorizedDate: value.authorizedDate,
 						isoCurrencyCode: value.isoCurrencyCode,
 						pending: value.pending,
