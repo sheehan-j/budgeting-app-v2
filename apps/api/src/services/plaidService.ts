@@ -1,4 +1,5 @@
 import {
+	deletePlaidItemRow,
 	getPlaidItemAccessTokenRows,
 	getPlaidItemRowByPlaidItemId,
 	getPlaidItemRows,
@@ -18,6 +19,7 @@ import {
 	getPlaidCountryCodes,
 	getPlaidProducts,
 	getPlaidRedirectUri,
+	getPlaidTransactionsDaysRequested,
 	plaidClient,
 } from "../lib/plaid.js";
 import { getMerchantSettings } from "./merchantSettingsService.js";
@@ -127,6 +129,22 @@ export const savePlaidItem = async (input: SavePlaidItemInput, userId: string) =
 };
 
 // Getters for Plaid item access tokens
+const getPlaidItemById = async (id: number, userId: string) => {
+	const items = await getPlaidItems(userId);
+	return items.find((item) => item.id === id) ?? null;
+};
+
+const getPlaidItemAccessTokenById = async (id: number, userId: string) => {
+	const rows = await getPlaidItemAccessTokenRows(userId);
+	const item = rows.find((row) => row.id === id);
+	if (!item) return null;
+
+	return {
+		...item,
+		accessToken: decryptPlaidAccessToken(item.accessTokenEncrypted),
+	};
+};
+
 export const getPlaidItemAccessTokenByPlaidItemId = async (plaidItemId: string) => {
 	const item = await getPlaidItemRowByPlaidItemId(plaidItemId);
 	if (!item) return null;
@@ -320,8 +338,37 @@ export const createPlaidLinkToken = async (userId: string) => {
 		country_codes: getPlaidCountryCodes(),
 		language: "en",
 		products: getPlaidProducts(),
+		transactions: {
+			days_requested: getPlaidTransactionsDaysRequested(),
+		},
 		user: {
 			client_user_id: userId,
+		},
+		...(process.env.PLAID_WEBHOOK_URL ? { webhook: process.env.PLAID_WEBHOOK_URL } : {}),
+		...(redirectUri ? { redirect_uri: redirectUri } : {}),
+	});
+
+	return {
+		linkToken: response.data.link_token,
+		expiration: response.data.expiration,
+	};
+};
+
+export const createPlaidUpdateLinkToken = async (itemId: number, userId: string) => {
+	const accessTokenRow = await getPlaidItemAccessTokenById(itemId, userId);
+	if (!accessTokenRow) return null;
+
+	const redirectUri = getPlaidRedirectUri();
+	const response = await plaidClient.linkTokenCreate({
+		client_name: getPlaidClientName(),
+		country_codes: getPlaidCountryCodes(),
+		language: "en",
+		user: {
+			client_user_id: userId,
+		},
+		access_token: accessTokenRow.accessToken,
+		update: {
+			account_selection_enabled: true,
 		},
 		...(process.env.PLAID_WEBHOOK_URL ? { webhook: process.env.PLAID_WEBHOOK_URL } : {}),
 		...(redirectUri ? { redirect_uri: redirectUri } : {}),
@@ -387,4 +434,79 @@ export const exchangePlaidPublicToken = async (publicToken: string, userId: stri
 	const sync = await syncPlaidItemTransactionsInternal(item, accessToken, userId);
 
 	return { item, sync };
+};
+
+export const completePlaidUpdateMode = async (itemId: number, userId: string) => {
+	const [existingItem, accessTokenRow] = await Promise.all([
+		getPlaidItemById(itemId, userId),
+		getPlaidItemAccessTokenById(itemId, userId),
+	]);
+
+	if (!existingItem || !accessTokenRow) return null;
+
+	const accessToken = accessTokenRow.accessToken;
+	const [accountsResponse, itemResponse] = await Promise.all([
+		plaidClient.accountsGet({ access_token: accessToken }),
+		plaidClient.itemGet({ access_token: accessToken }),
+	]);
+
+	const institutionId = itemResponse.data.item.institution_id ?? null;
+	let institutionName: string | null = null;
+
+	if (institutionId) {
+		try {
+			const institutionResponse = await plaidClient.institutionsGetById({
+				institution_id: institutionId,
+				country_codes: getPlaidCountryCodes(),
+			});
+			institutionName = institutionResponse.data.institution.name ?? null;
+		} catch (error) {
+			console.warn("Failed to fetch Plaid institution name", error);
+		}
+	}
+
+	const item = await savePlaidItem(
+		{
+			plaidItemId: existingItem.plaidItemId,
+			accessToken,
+			institutionId,
+			institutionName,
+			accounts: accountsResponse.data.accounts.map((account) => ({
+				plaidAccountId: account.account_id,
+				name: account.name,
+				mask: account.mask ?? null,
+				type: account.type,
+				subtype: account.subtype ?? null,
+			})),
+		},
+		userId,
+	);
+
+	if (!item) {
+		throw new Error("Failed to refresh Plaid item after update mode");
+	}
+
+	const sync = await syncPlaidItemTransactionsInternal(item, accessToken, userId);
+
+	return { item, sync };
+};
+
+export const removePlaidItem = async (itemId: number, userId: string) => {
+	const [existingItem, accessTokenRow] = await Promise.all([
+		getPlaidItemById(itemId, userId),
+		getPlaidItemAccessTokenById(itemId, userId),
+	]);
+
+	if (!existingItem || !accessTokenRow) return null;
+
+	await plaidClient.itemRemove({
+		access_token: accessTokenRow.accessToken,
+	});
+
+	await deletePlaidItemRow(itemId, userId);
+
+	return {
+		itemId,
+		institutionName: existingItem.institutionName,
+	};
 };

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { plaidAccounts } from "../db/schema/plaidAccountsSchema.js";
 import { plaidItems } from "../db/schema/plaidItemsSchema.js";
@@ -172,4 +172,29 @@ export const updatePlaidItemSyncRow = async (
 		.returning();
 
 	return result[0] ?? null;
+};
+
+export const deletePlaidItemRow = async (id: number, userId: string) => {
+	return db.transaction(async (tx) => {
+		const accounts = await tx.select().from(plaidAccounts).where(eq(plaidAccounts.plaidItemId, id));
+		const localAccountIds = accounts.map((account) => account.id);
+		const deleteTransactionsWhere =
+			localAccountIds.length > 0
+				? and(
+						eq(transactions.userId, userId),
+						or(eq(transactions.plaidItemId, id), inArray(transactions.plaidAccountId, localAccountIds)),
+					)
+				: and(eq(transactions.userId, userId), eq(transactions.plaidItemId, id));
+
+		await tx
+			.delete(transactions)
+			.where(deleteTransactionsWhere);
+
+		const result = await tx
+			.delete(plaidItems)
+			.where(and(eq(plaidItems.id, id), eq(plaidItems.userId, userId)))
+			.returning();
+
+		return result[0] ?? null;
+	});
 };

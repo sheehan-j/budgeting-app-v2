@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import ButtonSpinner from "../../common/ButtonSpinner";
 import { useDataStore } from "../../../util/dataStore";
-import { createPlaidLinkToken } from "../../../util/apiQueries";
+import { createPlaidLinkToken, createPlaidUpdateLinkToken } from "../../../util/apiQueries";
 import { loadPlaidLink } from "../../../util/loadPlaidLink";
 import { usePlaidItemsQuery } from "../../../queries/usePlaidItemsQuery";
 import { useExchangePlaidPublicTokenMutation } from "../../../mutations/useExchangePlaidPublicTokenMutation";
+import { useCompletePlaidUpdateModeMutation } from "../../../mutations/useCompletePlaidUpdateModeMutation";
 import { useSyncAllPlaidItemsMutation } from "../../../mutations/useSyncAllPlaidItemsMutation";
 import { formatPlaidSyncSuccessNotification } from "../../../util/plaidUtil";
 
-const PLAID_LINK_TOKEN_STORAGE_KEY = "plaid_link_token";
+const PLAID_LINK_SESSION_STORAGE_KEY = "plaid_link_session";
 
 const formatDateTime = (value) => {
 	if (!value) return "Never";
@@ -35,6 +36,11 @@ const formatSyncSummary = (sync) => {
 
 	return parts.length > 0 ? parts.join(", ") : "No transaction changes were needed.";
 };
+
+const formatUpdateModeSummary = (institutionName, sync) =>
+	`${institutionName ?? "Institution"} updated. ${
+		sync ? formatSyncSummary(sync) : "Changes will appear after the next sync."
+	}`;
 
 const formatPlaidExitMessage = (error, metadata) => {
 	const requestId = metadata?.request_id || error?.request_id;
@@ -66,36 +72,61 @@ const formatPlaidLabel = (value) => {
 		.join(" ");
 };
 
-const getStoredPlaidLinkToken = () => window.sessionStorage.getItem(PLAID_LINK_TOKEN_STORAGE_KEY);
+const getStoredPlaidLinkSession = () => {
+	const rawValue = window.sessionStorage.getItem(PLAID_LINK_SESSION_STORAGE_KEY);
+	if (!rawValue) return null;
 
-const storePlaidLinkToken = (linkToken) => {
-	window.sessionStorage.setItem(PLAID_LINK_TOKEN_STORAGE_KEY, linkToken);
+	try {
+		const parsedValue = JSON.parse(rawValue);
+		if (!parsedValue?.token || !parsedValue?.mode) return null;
+
+		return parsedValue;
+	} catch {
+		return {
+			token: rawValue,
+			mode: "connect",
+		};
+	}
 };
 
-const clearStoredPlaidLinkToken = () => {
-	window.sessionStorage.removeItem(PLAID_LINK_TOKEN_STORAGE_KEY);
+const storePlaidLinkSession = (linkSession) => {
+	window.sessionStorage.setItem(PLAID_LINK_SESSION_STORAGE_KEY, JSON.stringify(linkSession));
 };
 
+const clearStoredPlaidLinkSession = () => {
+	window.sessionStorage.removeItem(PLAID_LINK_SESSION_STORAGE_KEY);
+};
+
+// Check the current URL for oauth_state_id placed by Plaid to determine whether Plaid link flow should resume
 const hasOauthStateId = () => {
 	const searchParams = new URLSearchParams(window.location.search);
 	return searchParams.has("oauth_state_id");
 };
 
 const PlaidConnections = () => {
-	const { setNotification } = useDataStore((state) => ({
+	const { setNotification, setRemovingPlaidItem } = useDataStore((state) => ({
 		setNotification: state.setNotification,
+		setRemovingPlaidItem: state.setRemovingPlaidItem,
 	}));
 	const [scriptReady, setScriptReady] = useState(false);
-	const [startingLink, setStartingLink] = useState(false);
-	const [resumingLink, setResumingLink] = useState(false);
+	const [startingFlow, setStartingFlow] = useState(false); // Track when the Plaid flow has started
+	const [resumingFlow, setResumingFlow] = useState(false); // Track when the Plaid flow has resumed after OAuth redirect
+	const [updatingItemId, setUpdatingItemId] = useState(null);
 	const handlerRef = useRef(null);
+	const linkSessionRef = useRef(null);
 
 	const { data: plaidItems, isLoading } = usePlaidItemsQuery();
 	const exchangeMutation = useExchangePlaidPublicTokenMutation();
+	const completeUpdateModeMutation = useCompletePlaidUpdateModeMutation();
 	const syncAllMutation = useSyncAllPlaidItemsMutation();
+	const isPlaidBusy =
+		startingFlow || resumingFlow || exchangeMutation.isPending || completeUpdateModeMutation.isPending;
 
+	// Remove oauth_state_id from URL and remove stored Plaid link from local storage
 	const cleanupOauthRedirect = () => {
-		clearStoredPlaidLinkToken();
+		clearStoredPlaidLinkSession();
+		linkSessionRef.current = null;
+		setUpdatingItemId(null);
 
 		if (hasOauthStateId()) {
 			window.history.replaceState({}, document.title, window.location.pathname);
@@ -103,11 +134,35 @@ const PlaidConnections = () => {
 	};
 
 	const handlePlaidSuccess = (publicToken) => {
+		const linkSession = linkSessionRef.current ?? getStoredPlaidLinkSession();
+
+		// Destroy plaid handler and mark flow as complete in state
 		handlerRef.current?.destroy?.();
 		handlerRef.current = null;
-		setStartingLink(false);
-		setResumingLink(false);
+		setStartingFlow(false);
+		setResumingFlow(false);
 
+		// When Plaid flow was initiated to update a connection, trigger complete update mode flow in backend
+		if (linkSession?.mode === "update" && typeof linkSession.itemId === "number") {
+			completeUpdateModeMutation.mutate(
+				{ itemId: linkSession.itemId },
+				{
+					onSuccess: (response) => {
+						cleanupOauthRedirect();
+						setNotification({
+							type: "success",
+							message: formatUpdateModeSummary(response.item.institutionName, response.sync),
+						});
+					},
+					onError: () => {
+						cleanupOauthRedirect();
+					},
+				},
+			);
+			return;
+		}
+
+		// Otherwise (connect mode), exchange public token/trigger save Plaid item flow in backend
 		exchangeMutation.mutate(
 			{ publicToken },
 			{
@@ -127,11 +182,12 @@ const PlaidConnections = () => {
 		);
 	};
 
+	// Set notification and log error on Plaid error
 	const handlePlaidExit = (error, metadata) => {
 		handlerRef.current?.destroy?.();
 		handlerRef.current = null;
-		setStartingLink(false);
-		setResumingLink(false);
+		setStartingFlow(false);
+		setResumingFlow(false);
 
 		if (error) {
 			console.error("Plaid Link exit", {
@@ -155,10 +211,11 @@ const PlaidConnections = () => {
 		cleanupOauthRedirect();
 	};
 
+	// Load Plaid's handler on mount/destroy on unmount
 	useEffect(() => {
 		let mounted = true;
 
-		loadPlaidLink()
+		loadPlaidLink() // Fetch Plaid script from CDN and attach listeners
 			.then(() => {
 				if (mounted) setScriptReady(true);
 			})
@@ -169,14 +226,17 @@ const PlaidConnections = () => {
 		return () => {
 			mounted = false;
 			handlerRef.current?.destroy?.();
+			linkSessionRef.current = null;
 		};
 	}, []);
 
+	// Handle resume Plaid flow after oAuth redirect
 	useEffect(() => {
 		if (!hasOauthStateId()) return;
 
-		const storedLinkToken = getStoredPlaidLinkToken();
-		if (!storedLinkToken) {
+		// If returned back and info about link session is not stored, cannot continue
+		const storedLinkSession = getStoredPlaidLinkSession();
+		if (!storedLinkSession) {
 			setNotification({
 				type: "error",
 				message: "Plaid OAuth returned without an active Link session. Please try connecting again.",
@@ -186,26 +246,29 @@ const PlaidConnections = () => {
 		}
 
 		let mounted = true;
-		setResumingLink(true);
+		setResumingFlow(true);
+		linkSessionRef.current = storedLinkSession;
+		setUpdatingItemId(storedLinkSession.mode === "update" ? (storedLinkSession.itemId ?? null) : null);
 
 		loadPlaidLink()
 			.then((Plaid) => {
 				if (!mounted) return;
 
+				// Recreate Plaid handler after OAuth redirect using current URL and stored link
 				setScriptReady(true);
 				handlerRef.current?.destroy?.();
 				handlerRef.current = Plaid.create({
-					token: storedLinkToken,
+					token: storedLinkSession.token,
 					receivedRedirectUri: window.location.href,
 					onSuccess: handlePlaidSuccess,
 					onExit: handlePlaidExit,
 				});
-				handlerRef.current.open();
+				handlerRef.current.open(); // Re-open Plaid UI
 			})
 			.catch((error) => {
 				if (!mounted) return;
 
-				setResumingLink(false);
+				setResumingFlow(false);
 				cleanupOauthRedirect();
 				setNotification({
 					type: "error",
@@ -216,17 +279,62 @@ const PlaidConnections = () => {
 		return () => {
 			mounted = false;
 		};
-	}, [setNotification]);
+	}, []);
 
 	const handleConnectInstitution = async () => {
-		if (startingLink || resumingLink || exchangeMutation.isPending) return;
+		if (isPlaidBusy) return;
 
-		setStartingLink(true);
+		setStartingFlow(true);
 
 		try {
+			// Load Plaid script through CDN, create Plaid link token with Plaid client, and store link session info in localStorage
 			const [Plaid, linkTokenResponse] = await Promise.all([loadPlaidLink(), createPlaidLinkToken()]);
 			setScriptReady(true);
-			storePlaidLinkToken(linkTokenResponse.linkToken);
+			const linkSession = {
+				token: linkTokenResponse.linkToken,
+				mode: "connect",
+			};
+			linkSessionRef.current = linkSession;
+			storePlaidLinkSession(linkSession);
+
+			// Destroy current Plaid handler and create new Handler
+			handlerRef.current?.destroy?.();
+			handlerRef.current = Plaid.create({
+				token: linkTokenResponse.linkToken,
+				onSuccess: handlePlaidSuccess,
+				onExit: handlePlaidExit,
+			});
+
+			handlerRef.current.open(); // Open Plaid UI
+		} catch (error) {
+			setScriptReady(false);
+			setStartingFlow(false);
+			clearStoredPlaidLinkSession();
+			linkSessionRef.current = null;
+			setNotification({
+				type: "error",
+				message: error instanceof Error ? error.message : "Could not launch Plaid Link.",
+			});
+		}
+	};
+
+	const handleUpdateInstitution = async (itemId) => {
+		if (isPlaidBusy) return;
+
+		setUpdatingItemId(itemId);
+
+		try {
+			// Follow same process as handle connect, instead creating update link token and setting update mode
+			const [Plaid, linkTokenResponse] = await Promise.all([loadPlaidLink(), createPlaidUpdateLinkToken(itemId)]);
+			setScriptReady(true);
+
+			const linkSession = {
+				token: linkTokenResponse.linkToken,
+				mode: "update",
+				itemId,
+			};
+			linkSessionRef.current = linkSession;
+			storePlaidLinkSession(linkSession);
 
 			handlerRef.current?.destroy?.();
 			handlerRef.current = Plaid.create({
@@ -238,13 +346,21 @@ const PlaidConnections = () => {
 			handlerRef.current.open();
 		} catch (error) {
 			setScriptReady(false);
-			setStartingLink(false);
-			clearStoredPlaidLinkToken();
+			setUpdatingItemId(null);
+			clearStoredPlaidLinkSession();
+			linkSessionRef.current = null;
 			setNotification({
 				type: "error",
-				message: error instanceof Error ? error.message : "Could not launch Plaid Link.",
+				message: error instanceof Error ? error.message : "Could not launch Plaid update mode.",
 			});
 		}
+	};
+
+	const handleRemoveInstitution = (item) => {
+		setRemovingPlaidItem({
+			id: item.id,
+			institutionName: item.institutionName ?? "Institution",
+		});
 	};
 
 	const handleSyncAll = () => {
@@ -252,7 +368,7 @@ const PlaidConnections = () => {
 
 		syncAllMutation.mutate(undefined, {
 			onSuccess: (items) => {
-				setNotification(formatPlaidSyncSuccessNotification(items))
+				setNotification(formatPlaidSyncSuccessNotification(items));
 			},
 		});
 	};
@@ -274,9 +390,7 @@ const PlaidConnections = () => {
 					<div className="flex gap-2 flex-wrap">
 						<button
 							onClick={handleSyncAll}
-							disabled={
-								syncAllMutation.isPending || exchangeMutation.isPending || startingLink || resumingLink
-							}
+							disabled={syncAllMutation.isPending || isPlaidBusy}
 							className="relative border border-slate-300 rounded px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
 						>
 							<span className={syncAllMutation.isPending ? "opacity-0" : ""}>Sync All</span>
@@ -284,17 +398,11 @@ const PlaidConnections = () => {
 						</button>
 						<button
 							onClick={handleConnectInstitution}
-							disabled={startingLink || resumingLink || exchangeMutation.isPending}
-							className="relative bg-cGreen-light border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 disabled:opacity-60 disabled:cursor-not-allowed"
+							disabled={isPlaidBusy}
+							className="relative bg-cGreen-light hover:bg-cGreen-lightHover border border-slate-300 rounded px-3 py-2 text-sm text-slate-700 disabled:opacity-60 disabled:cursor-not-allowed"
 						>
-							<span
-								className={
-									startingLink || resumingLink || exchangeMutation.isPending ? "opacity-0" : ""
-								}
-							>
-								Connect Institution
-							</span>
-							{(startingLink || resumingLink || exchangeMutation.isPending) && <ButtonSpinner />}
+							<span className={isPlaidBusy ? "opacity-0" : ""}>Connect Institution</span>
+							{isPlaidBusy && <ButtonSpinner />}
 						</button>
 					</div>
 				</div>
@@ -313,10 +421,10 @@ const PlaidConnections = () => {
 						<div className="grow flex items-center px-3">
 							<div
 								className={`text-xs font-medium rounded-full px-3 py-2 
-									${!resumingLink && scriptReady ? "bg-cGreen-lighter text-cGreen-dark" : "bg-yellow-100 text-yellow-500"}
+									${!resumingFlow && scriptReady ? "bg-cGreen-lighter text-cGreen-dark" : "bg-yellow-100 text-yellow-500"}
 								`}
 							>
-								{resumingLink
+								{resumingFlow
 									? "Resuming OAuth..."
 									: scriptReady
 										? "Ready to connect"
@@ -342,22 +450,45 @@ const PlaidConnections = () => {
 					<div className="flex flex-col gap-4">
 						{plaidItems.map((item) => {
 							const activeAccounts = item.accounts.filter((account) => account.isActive);
+							const isUpdatingThisItem = updatingItemId === item.id;
+							const isItemActionDisabled = isPlaidBusy || isUpdatingThisItem;
 
 							return (
 								<div key={item.id} className="border border-slate-300 rounded-2xl overflow-hidden">
 									<div className="flex items-start justify-between gap-4 p-5 bg-slate-50 border-b border-slate-200 flex-wrap">
 										<div>
-											<div className="text-base font-semibold text-slate-700">
-												{item.institutionName ?? "Connected Institution"}
+											<div className="flex items-center gap-2 flex-wrap">
+												<div className="text-base font-semibold text-slate-700">
+													{item.institutionName ?? "Connected Institution"}
+												</div>
+												<div
+													className={`text-xs rounded-full px-2 py-1 ${getInstitutionStatusStyles(item.status)}`}
+												>
+													{formatPlaidLabel(item.status)}
+												</div>
 											</div>
 											<div className="text-sm text-slate-500 mt-1">
 												Last synced: {formatDateTime(item.lastSyncedAt)}
 											</div>
 										</div>
-										<div
-											className={`text-xs rounded-full px-2 py-1 ${getInstitutionStatusStyles(item.status)}`}
-										>
-											{formatPlaidLabel(item.status)}
+										<div className="flex items-center gap-2 flex-wrap">
+											<button
+												onClick={() => handleUpdateInstitution(item.id)}
+												disabled={isItemActionDisabled}
+												className="relative border border-slate-300 rounded px-2 py-1 text-xs text-slate-600 hover:bg-white disabled:opacity-60 disabled:cursor-not-allowed"
+											>
+												<span className={isUpdatingThisItem ? "opacity-0" : ""}>
+													Update Access
+												</span>
+												{isUpdatingThisItem && <ButtonSpinner />}
+											</button>
+											<button
+												onClick={() => handleRemoveInstitution(item)}
+												disabled={isPlaidBusy}
+												className="relative border bg-red-50 hover:bg-red-100 border-red-200 rounded px-2 py-1 text-xs text-red-400 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+											>
+												<span>Remove</span>
+											</button>
 										</div>
 									</div>
 									<div className="p-5">
@@ -381,7 +512,9 @@ const PlaidConnections = () => {
 															</div>
 															<div className="text-sm text-slate-500 mt-1">
 																{formatPlaidLabel(account.type)}
-																{account.subtype ? ` | ${formatPlaidLabel(account.subtype)}` : ""}
+																{account.subtype
+																	? ` | ${formatPlaidLabel(account.subtype)}`
+																	: ""}
 																{account.mask ? ` | ****${account.mask}` : ""}
 															</div>
 														</div>

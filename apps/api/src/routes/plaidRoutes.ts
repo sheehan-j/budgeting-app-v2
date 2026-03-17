@@ -2,15 +2,21 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { getAuthenticatedUser, type AppBindings } from "../lib/auth.js";
 import {
+	completePlaidUpdateMode,
 	createPlaidLinkToken,
+	createPlaidUpdateLinkToken,
 	exchangePlaidPublicToken,
 	getPlaidItems,
+	removePlaidItem,
 	syncPlaidItemByPlaidItemId,
 	syncAllPlaidItems,
 } from "../services/plaidService.js";
 import {
+	completePlaidUpdateModeBodySchema,
+	createPlaidUpdateLinkTokenBodySchema,
 	exchangePlaidPublicTokenBodySchema,
 	plaidWebhookBodySchema,
+	removePlaidItemBodySchema,
 } from "../validation/plaidValidation.js";
 
 const plaidRoutes = new Hono<AppBindings>();
@@ -76,6 +82,24 @@ plaidRoutes.post("/link-token", async (c) => {
 	}
 });
 
+plaidRoutes.post("/update-link-token", async (c) => {
+	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
+		const bodyResult = createPlaidUpdateLinkTokenBodySchema.safeParse(await c.req.json());
+		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
+
+		const linkToken = await createPlaidUpdateLinkToken(bodyResult.data.itemId, user.id);
+		if (!linkToken) return c.json({ error: "Plaid item not found" }, 404);
+
+		return c.json(linkToken);
+	} catch (error) {
+		console.error(error);
+		return c.json({ error: "Failed to create Plaid update link token" }, 500);
+	}
+});
+
 plaidRoutes.post("/exchange-public-token", async (c) => {
 	try {
 		const user = getAuthenticatedUser(c);
@@ -89,6 +113,42 @@ plaidRoutes.post("/exchange-public-token", async (c) => {
 	} catch (error) {
 		console.error(error);
 		return c.json({ error: "Failed to exchange Plaid public token" }, 500);
+	}
+});
+
+plaidRoutes.post("/complete-update-mode", async (c) => {
+	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
+		const bodyResult = completePlaidUpdateModeBodySchema.safeParse(await c.req.json());
+		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
+
+		const result = await completePlaidUpdateMode(bodyResult.data.itemId, user.id);
+		if (!result) return c.json({ error: "Plaid item not found" }, 404);
+
+		return c.json({ ok: true, ...result });
+	} catch (error) {
+		console.error(error);
+		return c.json({ error: "Failed to complete Plaid update mode" }, 500);
+	}
+});
+
+plaidRoutes.delete("/items", async (c) => {
+	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
+		const bodyResult = removePlaidItemBodySchema.safeParse(await c.req.json());
+		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
+
+		const result = await removePlaidItem(bodyResult.data.itemId, user.id);
+		if (!result) return c.json({ error: "Plaid item not found" }, 404);
+
+		return c.json({ ok: true, ...result });
+	} catch (error) {
+		console.error(error);
+		return c.json({ error: "Failed to remove Plaid institution" }, 500);
 	}
 });
 

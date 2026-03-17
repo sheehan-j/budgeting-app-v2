@@ -27,6 +27,16 @@ export const getPlaidClientName = () => process.env.PLAID_CLIENT_NAME?.trim() ||
 
 export const getPlaidRedirectUri = () => process.env.PLAID_REDIRECT_URI?.trim() || undefined;
 
+export const getPlaidTransactionsDaysRequested = () => {
+	const rawValue = process.env.PLAID_TRANSACTIONS_DAYS_REQUESTED?.trim();
+	if (!rawValue) return 730;
+
+	const parsedValue = Number(rawValue);
+	if (!Number.isInteger(parsedValue) || parsedValue <= 0) return 730;
+
+	return Math.min(parsedValue, 730);
+};
+
 const config = new Configuration({
 	basePath: getPlaidEnvironment(),
 	baseOptions: {

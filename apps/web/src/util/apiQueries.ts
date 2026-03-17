@@ -194,6 +194,18 @@ type ExchangePlaidPublicTokenResponse = {
 	sync: PlaidSyncSummary | null;
 };
 
+type CompletePlaidUpdateModeResponse = {
+	ok: boolean;
+	item: PlaidItem;
+	sync: PlaidSyncSummary | null;
+};
+
+type RemovePlaidItemResponse = {
+	ok: boolean;
+	itemId: number;
+	institutionName: string | null;
+};
+
 type SyncAllPlaidItemsResponse = {
 	ok: boolean;
 	items: PlaidSyncSummary[];
@@ -452,6 +464,16 @@ export const createPlaidLinkToken = async (): Promise<PlaidLinkTokenResponse> =>
 	}
 };
 
+export const createPlaidUpdateLinkToken = async (itemId: number): Promise<PlaidLinkTokenResponse> => {
+	try {
+		return await apiClient.post<PlaidLinkTokenResponse, { itemId: number }>("/plaid/update-link-token", {
+			itemId,
+		});
+	} catch {
+		return throwWithMessage("Could not start Plaid update mode.");
+	}
+};
+
 export const exchangePlaidPublicToken = async (
 	publicToken: string,
 ): Promise<ExchangePlaidPublicTokenResponse> => {
@@ -466,6 +488,27 @@ export const exchangePlaidPublicToken = async (
 		});
 	} catch {
 		return throwWithMessage("Could not connect this institution.");
+	}
+};
+
+export const completePlaidUpdateMode = async (itemId: number): Promise<CompletePlaidUpdateModeResponse> => {
+	try {
+		return await apiClient.post<CompletePlaidUpdateModeResponse, { itemId: number }>(
+			"/plaid/complete-update-mode",
+			{
+				itemId,
+			},
+		);
+	} catch {
+		return throwWithMessage("Could not refresh this institution.");
+	}
+};
+
+export const removePlaidItem = async (itemId: number): Promise<RemovePlaidItemResponse> => {
+	try {
+		return await apiClient.del<RemovePlaidItemResponse, { itemId: number }>("/plaid/items", { itemId });
+	} catch {
+		return throwWithMessage("Could not remove this institution.");
 	}
 };
 

@@ -1,3 +1,5 @@
+// ** Load Plaid Link flow through CDN and inject it into the page
+
 const PLAID_LINK_SCRIPT_SRC = "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
 
 let plaidScriptPromise = null;
