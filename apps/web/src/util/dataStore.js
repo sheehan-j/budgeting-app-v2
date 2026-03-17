@@ -35,6 +35,9 @@ const store = (set) => ({
   
 	editingNotesTransaction: null,
 	setEditingNotesTransaction: (editingNotesTransaction) => set(() => ({ editingNotesTransaction })),
+
+	removingPlaidItem: null,
+	setRemovingPlaidItem: (removingPlaidItem) => set(() => ({ removingPlaidItem })),
 });
 
 export const useDataStore = create(store);

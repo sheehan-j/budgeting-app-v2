@@ -13,7 +13,7 @@ const signupWhitelist = new Set(
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
-	trustedOrigins: [process.env.CORS_ORIGIN || "http://localhost:5173"],
+	trustedOrigins: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : ["http://localhost:5173"],
 	database: drizzleAdapter(db, {
 		provider: "pg",
 	}),

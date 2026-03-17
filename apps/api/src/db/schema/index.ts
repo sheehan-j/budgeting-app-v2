@@ -3,3 +3,5 @@ export * from "./transactionsSchema.js";
 export * from "./merchantsSchema.js";
 export * from "./budgetsSchema.js";
 export * from "./authSchema.js";
+export * from "./plaidItemsSchema.js";
+export * from "./plaidAccountsSchema.js";

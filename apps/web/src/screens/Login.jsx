@@ -50,13 +50,6 @@ const Login = () => {
 			return;
 		}
 
-		// if (!(await isEmailWhitelisted(email))) {
-		// 	setError(
-		// 		"Sorry, your email is not whitelisted for signup. Please send an email to jordansheehan26@gmail.com to get your email whitelisted.",
-		// 	);
-		// 	return;
-		// }
-
 		await authClient.signUp.email(
 			{
 				email,

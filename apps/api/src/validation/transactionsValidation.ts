@@ -35,3 +35,10 @@ export const updateTransactionNotesBodySchema = z.object({
 
 export const applyMerchantSettingsBodySchema = z.object({
 }).strict();
+
+export const importCapitalOneCsvBodySchema = z.object({
+	itemId: z.coerce.number().int().positive(),
+	accountId: z.coerce.number().int().positive(),
+	csvText: z.string().min(1).max(2_000_000),
+	fileName: z.string().trim().min(1).max(255).optional(),
+});

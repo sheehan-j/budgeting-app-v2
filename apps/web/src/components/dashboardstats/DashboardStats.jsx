@@ -101,12 +101,6 @@ const DashboardStats = () => {
 				)}
 			</div>
 			<div className="px-6 pb-6 pt-5 flex flex-col grow text-slate-700 justify-center bg-white border border-slate-300 rounded-2xl">
-				{/* <div className="text-sm text-slate-700 font-medium">{dashboardStats?.spending?.title}</div>
-				<div>
-					<div className="bg-cGreen-lightTrans inline-block border border-cGreen p-1 text-4xl font-bold text-cGreen-dark">
-						{dashboardStats?.spending?.amount?.toFixed(2)}
-					</div>
-				</div> */}
 				{showInitialLoadingState && (
 					<>
 						<div className="bg-slate-200 animate-pulse w-32 rounded h-4 mb-2"></div>
