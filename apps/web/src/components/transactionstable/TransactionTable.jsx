@@ -15,9 +15,19 @@ import Pagination from "./Pagination";
 import BulkActions from "./BulkActions";
 
 const TransactionTable = () => {
-	const { dashboardSortState, setDashboardSortState, filters, setFilters, setNotification } = useDataStore((state) => ({
+	const {
+		dashboardSortState,
+		setDashboardSortState,
+		dashboardPage,
+		setDashboardPage,
+		filters,
+		setFilters,
+		setNotification,
+	} = useDataStore((state) => ({
 		dashboardSortState: state.dashboardSortState,
 		setDashboardSortState: state.setDashboardSortState,
+		dashboardPage: state.dashboardPage,
+		setDashboardPage: state.setDashboardPage,
 		totalTransactionCount: state.totalTransactionCount,
 		filters: state.filters,
 		setFilters: state.setFilters,
@@ -26,10 +36,10 @@ const TransactionTable = () => {
 
 	const tableRef = useRef(null);
 	const filtersRef = useRef(null);
+	const hasMountedRef = useRef(false);
 
 	const [selectedTransactionIds, setSelectedTransactionIds] = useState([]);
 	const [showFilters, setShowFilters] = useState(false);
-	const [page, setPage] = useState(0);
 	const pageSize = 20;
 
 	const { data: categories, isLoading: categoriesLoading } = useCategoriesQuery();
@@ -51,8 +61,8 @@ const TransactionTable = () => {
 	}, [transactions, dashboardSortState]);
 
 	const pagedTransactions = useMemo(() => {
-		return sortedTransactions.slice(page * pageSize, page * pageSize + pageSize);
-	}, [sortedTransactions, page]);
+		return sortedTransactions.slice(dashboardPage * pageSize, dashboardPage * pageSize + pageSize);
+	}, [sortedTransactions, dashboardPage]);
 
 	const selectedTransactions = useMemo(() => {
 		return transactions.filter((transaction) => selectedTransactionIds.includes(transaction.id));
@@ -65,9 +75,14 @@ const TransactionTable = () => {
 	const tableLocked =
 		!showInitialLoadingState && (updateTransactionCategoryMutation.isPending || dashboardDataFetching);
 
+	const pageLimit = useMemo(() => {
+		return Math.ceil(transactions?.length / pageSize) - 1;
+	}, [transactions]);
+
 	useEffect(() => {
-		setPage(0);
-	}, [filters]);
+		if (transactions.length > 0 && dashboardPage > Math.ceil(transactions?.length / pageSize) - 1)
+			setDashboardPage(pageLimit);
+	}, [transactions]);
 
 	// Resize the height of the filter menu on window resize
 	useLayoutEffect(() => {
@@ -95,7 +110,7 @@ const TransactionTable = () => {
 
 		syncAllPlaidItemsMutation.mutate(undefined, {
 			onSuccess: (items) => {
-				setNotification(formatPlaidSyncSuccessNotification(items))
+				setNotification(formatPlaidSyncSuccessNotification(items));
 			},
 		});
 	};
@@ -321,8 +336,8 @@ const TransactionTable = () => {
 						)}
 					</div>
 					<Pagination
-						page={page}
-						setPage={setPage}
+						page={dashboardPage}
+						setPage={setDashboardPage}
 						pageLimit={Math.ceil(transactions?.length / pageSize) - 1}
 					/>
 				</div>
