@@ -154,7 +154,7 @@ const normalizeDate = (value: string) => {
 		const [, monthValue, dayValue, yearValue] = slashMatch;
 		month = Number(monthValue);
 		day = Number(dayValue);
-		year = Number(yearValue.length === 2 ? `20${yearValue}` : yearValue);
+		year = Number(yearValue!.length === 2 ? `20${yearValue}` : yearValue);
 	} else if (isoMatch) {
 		const [, yearValue, monthValue, dayValue] = isoMatch;
 		year = Number(yearValue);
@@ -185,7 +185,7 @@ export const parseCapitalOneCsv = (csvText: string): ParsedCapitalOneCsvTransact
 		throw new Error("Capital One CSV must include headers and at least one transaction row.");
 	}
 
-	const headers = rows[0].map(normalizeHeader);
+	const headers = rows[0]!.map(normalizeHeader);
 	const profile = detectCapitalOneCsvProfile(headers);
 
 	return rows.slice(1).flatMap((row, index) => {
