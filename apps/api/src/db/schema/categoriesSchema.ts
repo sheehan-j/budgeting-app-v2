@@ -4,7 +4,6 @@ export const categories = pgTable("categories", {
 	name: text("name").primaryKey(),
 	color: text("color").notNull(),
 	colorDark: text("colorDark").notNull(),
-	orderIndex: integer("orderIndex").notNull(),
+	position: integer("position").notNull(),
 	colorLight: text("colorLight"),
 });
-

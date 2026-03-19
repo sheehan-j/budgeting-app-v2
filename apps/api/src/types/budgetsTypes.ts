@@ -13,15 +13,14 @@ export type Budget = {
 	name: string;
 	color: string;
 	colorDark: string;
-	colorLight: string | null; 
-	orderIndex: number | null; // Allow nullable since totalBudget object won't have this property
+	colorLight: string | null;
+	position: number | null; // Allow nullable since totalBudget object won't have this property
 	limit: number | null;
 	spending: number;
 	percentage: number | null;
 };
 
-// More specific view for categorical budgets, which require orderIndex for sorting
+// More specific view for categorical budgets, which require position for sorting
 export type CategoryBudget = Budget & {
-	orderIndex: number;
+	position: number;
 };
-

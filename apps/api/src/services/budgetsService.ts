@@ -48,12 +48,12 @@ export const getBudgets = async ({ month, year, userId }: { month: number; year:
 		};
 	});
 
-	formattedBudgets.sort((a, b) => a.orderIndex - b.orderIndex);
+	formattedBudgets.sort((a, b) => a.position - b.position);
 
 	// Construct total buidget with combined limit and spending across all categories
 	const totalBudget: Budget = {
 		name: "Total",
-		orderIndex: null,
+		position: null,
 		limit: totalLimit > 0 ? totalLimit : null,
 		spending: totalSpending,
 		percentage: totalLimit > 0 ? (totalSpending / totalLimit) * 100 : null,

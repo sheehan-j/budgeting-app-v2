@@ -23,7 +23,7 @@ type TransactionCountResponse = {
 
 type Category = {
 	name: string;
-	orderIndex: number;
+	position: number;
 	color: string;
 	colorDark: string;
 	colorLight?: string | null;
@@ -226,7 +226,6 @@ type OkResponse = {
 	ok: boolean;
 };
 
-
 const throwWithMessage = (message: string): never => {
 	throw new Error(message);
 };
@@ -285,10 +284,7 @@ const formatTransactions = (transactions: Transaction[]): Transaction[] => {
 	return formattedTransactions;
 };
 
-export const setTransactionCategories = async (
-	transactionIds: number[],
-	categoryName: string,
-): Promise<boolean> => {
+export const setTransactionCategories = async (transactionIds: number[], categoryName: string): Promise<boolean> => {
 	try {
 		if (transactionIds.length === 0) return true;
 
@@ -344,7 +340,7 @@ export const deleteTransactions = async (transactionIds: number[]): Promise<bool
 export const getCategories = async (): Promise<Category[]> => {
 	try {
 		const data = await apiClient.get<Category[]>("/categories");
-		return [...data].sort((a, b) => a.orderIndex - b.orderIndex);
+		return [...data].sort((a, b) => a.position - b.position);
 	} catch {
 		return throwWithMessage("Could not fetch categories.");
 	}
@@ -352,10 +348,9 @@ export const getCategories = async (): Promise<Category[]> => {
 
 export const getDashboardData = async (filters: DashboardFilter[]): Promise<DashboardResponse> => {
 	try {
-		const data = await apiClient.post<DashboardResponse, { filters: DashboardFilter[] }>(
-			"/dashboard/stats",
-			{ filters },
-		);
+		const data = await apiClient.post<DashboardResponse, { filters: DashboardFilter[] }>("/dashboard/stats", {
+			filters,
+		});
 
 		return {
 			transactions: formatTransactions(data.transactions),
@@ -376,10 +371,7 @@ export const getSpending = async (year: number | string): Promise<Record<string,
 	}
 };
 
-export const getBudgets = async (
-	month: number | string,
-	year: number | string,
-): Promise<CategoryBudget[]> => {
+export const getBudgets = async (month: number | string, year: number | string): Promise<CategoryBudget[]> => {
 	try {
 		return await apiClient.get<CategoryBudget[]>("/budgets", {
 			month: Number(month),
@@ -485,9 +477,7 @@ export const createPlaidUpdateLinkToken = async (itemId: number): Promise<PlaidL
 	}
 };
 
-export const exchangePlaidPublicToken = async (
-	publicToken: string,
-): Promise<ExchangePlaidPublicTokenResponse> => {
+export const exchangePlaidPublicToken = async (publicToken: string): Promise<ExchangePlaidPublicTokenResponse> => {
 	try {
 		return await apiClient.post<
 			ExchangePlaidPublicTokenResponse,
@@ -525,10 +515,7 @@ export const removePlaidItem = async (itemId: number): Promise<RemovePlaidItemRe
 
 export const syncAllPlaidItems = async (): Promise<PlaidSyncSummary[]> => {
 	try {
-		const response = await apiClient.post<SyncAllPlaidItemsResponse, Record<string, never>>(
-			"/plaid/sync-all",
-			{},
-		);
+		const response = await apiClient.post<SyncAllPlaidItemsResponse, Record<string, never>>("/plaid/sync-all", {});
 		return response.items;
 	} catch {
 		return throwWithMessage("Could not sync connected accounts.");
@@ -557,9 +544,7 @@ export const importCapitalOneCsv = async (
 			fileName,
 		});
 	} catch (error) {
-		return throwWithMessage(
-			error instanceof Error ? error.message : "Could not import Capital One transactions.",
-		);
+		return throwWithMessage(error instanceof Error ? error.message : "Could not import Capital One transactions.");
 	}
 };
 
