@@ -6,13 +6,14 @@ import RemovePlaidItemModal from "../components/settingspage/plaid/RemovePlaidIt
 import Navbar from "../components/navbar/Navbar";
 import NotificationBanner from "../components/common/NotificationBanner";
 import SettingsNavBar from "../components/settingspage/SettingsNavBar";
+import CategoriesSettings from "../components/settingspage/categories/CategoriesSettings";
 
 const Settings = () => {
 	const { activeSetting, setActiveSetting } = useDataStore((state) => ({
 		activeSetting: state.activeSetting,
 		setActiveSetting: state.setActiveSetting,
 	}));
-	const settings = ["Connected Accounts", "Merchants"];
+	const settings = ["Connected Accounts", "Merchants", "Categories"];
 
 	useEffect(() => {
 		if (activeSetting === null) setActiveSetting(settings[0]);
@@ -28,6 +29,7 @@ const Settings = () => {
 				<div className="grow h-full flex bg-white border border-slate-300 rounded-2xl">
 					{activeSetting === "Connected Accounts" && <PlaidConnections />}
 					{activeSetting === "Merchants" && <MerchantSettings />}
+					{activeSetting === "Categories" && <CategoriesSettings />}
 				</div>
 			</div>
 			<NotificationBanner />

@@ -28,7 +28,7 @@ const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactio
 	const updateTransactionsIgnoredMutation = useUpdateTransactionsIgnoredMutation();
 	const deleteTransactionsMutation = useDeleteTransactionsMutation();
 
-	const onClickCategory = async (categoryName) => {
+	const onClickCategory = async (categoryId) => {
 		if (updateTransactionsCategoryMutation.isPending) return;
 
 		await closeAndWait();
@@ -36,7 +36,7 @@ const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactio
 		updateTransactionsCategoryMutation.mutate(
 			{
 				transactionIds: selectedTransactionIds,
-				categoryName,
+				categoryId,
 			},
 			{
 				onError: () => {
@@ -158,7 +158,7 @@ const BulkActions = ({ categories, selectedTransactionIds, setSelectedTransactio
 												borderColor: category.colorDark,
 											}}
 											onClick={() => {
-												onClickCategory(category.name);
+												onClickCategory(category.id);
 											}}
 										>
 											{category.name}

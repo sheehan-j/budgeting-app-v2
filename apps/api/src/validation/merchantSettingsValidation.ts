@@ -8,5 +8,5 @@ export const saveMerchantSettingBodySchema = z.object({
 	id: z.coerce.number().int().positive().optional(),
 	text: z.string().trim().min(1),
 	type: z.enum(["contains", "equals"]),
-	categoryName: z.string().trim().min(1),
+	categoryId: z.coerce.number().int().positive(),
 });

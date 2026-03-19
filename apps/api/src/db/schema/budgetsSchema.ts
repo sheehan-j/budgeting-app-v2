@@ -1,11 +1,10 @@
-import { numeric, pgTable, text } from "drizzle-orm/pg-core";
+import { bigint, numeric, pgTable, text } from "drizzle-orm/pg-core";
 import { categories } from "./categoriesSchema.js";
 
 export const budgets = pgTable("budgets", {
-	categoryName: text("categoryName")
+	categoryId: bigint("categoryId", { mode: "number" })
 		.notNull()
-		.references(() => categories.name, { onUpdate: "cascade" }),
+		.references(() => categories.id, { onUpdate: "cascade" }),
 	limit: numeric("limit").notNull(),
 	userId: text("userId").notNull(),
 });
-

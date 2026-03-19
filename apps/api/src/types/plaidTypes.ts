@@ -31,7 +31,7 @@ export type UpsertPlaidTransactionInput = {
 	merchant: string;
 	configurationName: string;
 	userId: string;
-	categoryName: string;
+	categoryId: number;
 	month: number;
 	day: number;
 	year: number;

@@ -70,7 +70,7 @@ const DashboardStats = () => {
 						)}
 						{dashboardStats.specialCaseCategory === true && (
 							<>
-								{/* {SPENDING FOR SPECIAL CASE CATEGORIES (INCOME, CREDITS/PAYMENTS)} */}
+								{/* {SPENDING FOR SPECIAL CASE CATEGORIES (INCOME, Payments/Transfers)} */}
 								<div className="text-sm text-slate-700 font-semibold mb-1 flex items-center justify-start">
 									<span
 										className="font-medium py-0.5 px-1 rounded mr-1"
@@ -155,10 +155,7 @@ const DashboardStats = () => {
 									maxHeight: showAllCategories ? `${extraCategoriesHeight}px` : "0px",
 								}}
 							>
-								<div
-									ref={extraCategoriesRef}
-									className="flex flex-col gap-2 pt-2"
-								>
+								<div ref={extraCategoriesRef} className="flex flex-col gap-2 pt-2">
 									{dashboardStats?.categories?.length > 3 && (
 										<>
 											{dashboardStats?.categories

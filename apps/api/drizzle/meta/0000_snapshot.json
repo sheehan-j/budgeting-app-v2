@@ -1,5 +1,5 @@
 {
-  "id": "12b69d11-6cc8-4913-859b-675527f27398",
+  "id": "d56b6056-9f7f-4c12-880c-49ccb9fa79f4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -363,9 +363,9 @@
       "name": "budgets",
       "schema": "",
       "columns": {
-        "categoryName": {
-          "name": "categoryName",
-          "type": "text",
+        "categoryId": {
+          "name": "categoryId",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
@@ -377,22 +377,22 @@
         },
         "userId": {
           "name": "userId",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "budgets_categoryName_categories_name_fk": {
-          "name": "budgets_categoryName_categories_name_fk",
+        "budgets_categoryId_categories_id_fk": {
+          "name": "budgets_categoryId_categories_id_fk",
           "tableFrom": "budgets",
           "tableTo": "categories",
           "columnsFrom": [
-            "categoryName"
+            "categoryId"
           ],
           "columnsTo": [
-            "name"
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "cascade"
@@ -408,10 +408,27 @@
       "name": "categories",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "byDefault",
+            "name": "categories_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
         "name": {
           "name": "name",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true
         },
         "color": {
@@ -420,27 +437,29 @@
           "primaryKey": false,
           "notNull": true
         },
-        "colorDark": {
-          "name": "colorDark",
+        "userId": {
+          "name": "userId",
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "orderIndex": {
-          "name": "orderIndex",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "colorLight": {
-          "name": "colorLight",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "categories_userId_user_id_fk": {
+          "name": "categories_userId_user_id_fk",
+          "tableFrom": "categories",
+          "tableTo": "user",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -494,13 +513,13 @@
         },
         "userId": {
           "name": "userId",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "categoryName": {
-          "name": "categoryName",
-          "type": "text",
+        "categoryId": {
+          "name": "categoryId",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
@@ -534,22 +553,142 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "plaidTransactionId": {
+          "name": "plaidTransactionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plaidItemId": {
+          "name": "plaidItemId",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plaidAccountId": {
+          "name": "plaidAccountId",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rawMerchantName": {
+          "name": "rawMerchantName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "authorizedDate": {
+          "name": "authorizedDate",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "isoCurrencyCode": {
+          "name": "isoCurrencyCode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending": {
+          "name": "pending",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "removedAt": {
+          "name": "removedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "transactions_plaidItemId_idx": {
+          "name": "transactions_plaidItemId_idx",
+          "columns": [
+            {
+              "expression": "plaidItemId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "transactions_plaidAccountId_idx": {
+          "name": "transactions_plaidAccountId_idx",
+          "columns": [
+            {
+              "expression": "plaidAccountId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "transactions_plaidTransactionId_key": {
+          "name": "transactions_plaidTransactionId_key",
+          "columns": [
+            {
+              "expression": "plaidTransactionId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "transactions_categoryName_categories_name_fk": {
-          "name": "transactions_categoryName_categories_name_fk",
+        "transactions_categoryId_categories_id_fk": {
+          "name": "transactions_categoryId_categories_id_fk",
           "tableFrom": "transactions",
           "tableTo": "categories",
           "columnsFrom": [
-            "categoryName"
+            "categoryId"
           ],
           "columnsTo": [
-            "name"
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "cascade"
+        },
+        "transactions_plaidItemId_plaid_items_id_fk": {
+          "name": "transactions_plaidItemId_plaid_items_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "plaid_items",
+          "columnsFrom": [
+            "plaidItemId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "transactions_plaidAccountId_plaid_accounts_id_fk": {
+          "name": "transactions_plaidAccountId_plaid_accounts_id_fk",
+          "tableFrom": "transactions",
+          "tableTo": "plaid_accounts",
+          "columnsFrom": [
+            "plaidAccountId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -591,33 +730,303 @@
           "primaryKey": false,
           "notNull": true
         },
-        "categoryName": {
-          "name": "categoryName",
-          "type": "text",
+        "categoryId": {
+          "name": "categoryId",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
         "userId": {
           "name": "userId",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "merchants_categoryName_categories_name_fk": {
-          "name": "merchants_categoryName_categories_name_fk",
+        "merchants_categoryId_categories_id_fk": {
+          "name": "merchants_categoryId_categories_id_fk",
           "tableFrom": "merchants",
           "tableTo": "categories",
           "columnsFrom": [
-            "categoryName"
+            "categoryId"
           ],
           "columnsTo": [
-            "name"
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.plaid_items": {
+      "name": "plaid_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "byDefault",
+            "name": "plaid_items_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plaidItemId": {
+          "name": "plaidItemId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accessTokenEncrypted": {
+          "name": "accessTokenEncrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "institutionId": {
+          "name": "institutionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "institutionName": {
+          "name": "institutionName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cursor": {
+          "name": "cursor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "lastSyncedAt": {
+          "name": "lastSyncedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "plaid_items_userId_idx": {
+          "name": "plaid_items_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "plaid_items_plaidItemId_key": {
+          "name": "plaid_items_plaidItemId_key",
+          "columns": [
+            {
+              "expression": "plaidItemId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "plaid_items_userId_user_id_fk": {
+          "name": "plaid_items_userId_user_id_fk",
+          "tableFrom": "plaid_items",
+          "tableTo": "user",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.plaid_accounts": {
+      "name": "plaid_accounts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "byDefault",
+            "name": "plaid_accounts_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "plaidItemId": {
+          "name": "plaidItemId",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plaidAccountId": {
+          "name": "plaidAccountId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mask": {
+          "name": "mask",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subtype": {
+          "name": "subtype",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "plaid_accounts_plaidItemId_idx": {
+          "name": "plaid_accounts_plaidItemId_idx",
+          "columns": [
+            {
+              "expression": "plaidItemId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "plaid_accounts_plaidAccountId_key": {
+          "name": "plaid_accounts_plaidAccountId_key",
+          "columns": [
+            {
+              "expression": "plaidAccountId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "plaid_accounts_plaidItemId_plaid_items_id_fk": {
+          "name": "plaid_accounts_plaidItemId_plaid_items_id_fk",
+          "tableFrom": "plaid_accounts",
+          "tableTo": "plaid_items",
+          "columnsFrom": [
+            "plaidItemId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},

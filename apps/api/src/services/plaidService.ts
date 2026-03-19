@@ -10,10 +10,7 @@ import {
 	markPlaidTransactionsRemovedRows,
 	upsertPlaidTransactionsRows,
 } from "../repositories/transactionsRepository.js";
-import {
-	decryptPlaidAccessToken,
-	encryptPlaidAccessToken,
-} from "../lib/plaidAccessTokenCrypto.js";
+import { decryptPlaidAccessToken, encryptPlaidAccessToken } from "../lib/plaidAccessTokenCrypto.js";
 import {
 	getPlaidClientName,
 	getPlaidCountryCodes,
@@ -23,11 +20,8 @@ import {
 	plaidClient,
 } from "../lib/plaid.js";
 import { getMerchantSettings } from "./merchantSettingsService.js";
-import type {
-	SavePlaidItemInput,
-	UpdatePlaidItemSyncInput,
-	UpsertPlaidTransactionInput,
-} from "../types/plaidTypes.js";
+import { getCategoriesRows } from "../repositories/categoriesRepository.js";
+import type { SavePlaidItemInput, UpdatePlaidItemSyncInput, UpsertPlaidTransactionInput } from "../types/plaidTypes.js";
 
 type PlaidItemRow = Awaited<ReturnType<typeof getPlaidItemRows>>[number];
 
@@ -83,21 +77,22 @@ const groupPlaidItemRows = (rows: PlaidItemRow[]) => {
 
 type NormalizedPlaidItem = NonNullable<ReturnType<typeof normalizePlaidItem>>;
 
-const getCategoryNameForMerchant = (
+const getCategoryIdForMerchant = (
 	merchant: string,
 	merchantSettings: Awaited<ReturnType<typeof getMerchantSettings>>,
+	defaultCategoryId: number,
 ) => {
-	let categoryName = "Uncategorized";
+	let categoryId = defaultCategoryId;
 
 	for (const merchantSetting of merchantSettings) {
 		if (merchantSetting.type === "contains" && merchant.includes(merchantSetting.text)) {
-			categoryName = merchantSetting.category.name;
+			categoryId = merchantSetting.category.id;
 		} else if (merchantSetting.type === "equals" && merchant === merchantSetting.text) {
-			categoryName = merchantSetting.category.name;
+			categoryId = merchantSetting.category.id;
 		}
 	}
 
-	return categoryName;
+	return categoryId;
 };
 
 const getDateParts = (date: string) => {
@@ -181,7 +176,7 @@ const buildPlaidTransactionUpsertInput = (
 		plaidItemId: number;
 		plaidAccountId: number;
 		configurationName: string;
-		categoryName: string;
+		categoryId: number;
 	},
 ): UpsertPlaidTransactionInput => {
 	const merchant = transaction.merchant_name?.trim() || transaction.name.trim();
@@ -193,7 +188,7 @@ const buildPlaidTransactionUpsertInput = (
 		merchant,
 		configurationName: options.configurationName,
 		userId: options.userId,
-		categoryName: options.categoryName,
+		categoryId: options.categoryId,
 		month,
 		day,
 		year,
@@ -214,13 +209,16 @@ export const updatePlaidItemSyncState = async (id: number, userId: string, input
 };
 
 // ** Main driver for sync functionality with transactionsSync call to Plaid
-const syncPlaidItemTransactionsInternal = async (
-	item: NormalizedPlaidItem,
-	accessToken: string,
-	userId: string,
-) => {
+const syncPlaidItemTransactionsInternal = async (item: NormalizedPlaidItem, accessToken: string, userId: string) => {
 	try {
-		const merchantSettings = await getMerchantSettings(userId);
+		const [merchantSettings, categoryRows] = await Promise.all([
+			getMerchantSettings(userId),
+			getCategoriesRows(userId),
+		]);
+		const uncategorizedCategory = categoryRows.find((category) => category.name === "Uncategorized");
+		if (!uncategorizedCategory) {
+			throw new Error('Default "Uncategorized" category not found.');
+		}
 		const accountsByPlaidAccountId = new Map(item.accounts.map((account) => [account.plaidAccountId, account]));
 
 		let cursor = item.cursor ?? null;
@@ -253,7 +251,7 @@ const syncPlaidItemTransactionsInternal = async (
 						plaidItemId: item.id,
 						plaidAccountId: account.id,
 						configurationName: account.name,
-						categoryName: getCategoryNameForMerchant(merchant, merchantSettings),
+						categoryId: getCategoryIdForMerchant(merchant, merchantSettings, uncategorizedCategory.id),
 					});
 				})
 				.filter((value): value is UpsertPlaidTransactionInput => value !== null);
@@ -297,10 +295,7 @@ const syncPlaidItemTransactionsInternal = async (
 };
 
 export const syncAllPlaidItems = async (userId: string) => {
-	const [items, accessTokenRows] = await Promise.all([
-		getPlaidItems(userId),
-		getPlaidItemAccessTokens(userId),
-	]);
+	const [items, accessTokenRows] = await Promise.all([getPlaidItems(userId), getPlaidItemAccessTokens(userId)]);
 	const itemById = new Map(items.map((item) => [item.id, item]));
 	const results: Awaited<ReturnType<typeof syncPlaidItemTransactionsInternal>>[] = [];
 

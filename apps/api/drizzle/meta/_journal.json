@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1773464535907,
-      "tag": "0000_green_sir_ram",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1773631986768,
-      "tag": "0001_third_hydra",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1773633221982,
-      "tag": "0002_lowly_the_twelve",
+      "when": 1773902435105,
+      "tag": "0000_whole_microbe",
       "breakpoints": true
     }
   ]
