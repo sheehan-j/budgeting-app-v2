@@ -13,14 +13,14 @@ export const getMerchantSettingsRows = async (userId: string) => {
 	const categories = await getCategoriesRows(userId);
 
 	return merchantSettings.map((merchantSetting) => {
-		const matches = categories.filter((category) => category.id === merchantSetting.categoryId);
-		if (matches.length !== 1) throw new Error("Merchant setting with dangling category.");
+		const match = categories.find((category) => category.id === merchantSetting.categoryId);
+		if (!match) throw new Error("Merchant setting with dangling category.");
 
 		return {
 			id: merchantSetting.id,
-      text: merchantSetting.text,
-      type: merchantSetting.type,
-			category: matches[0],
+			text: merchantSetting.text,
+			type: merchantSetting.type,
+			category: match,
 		};
 	});
 };

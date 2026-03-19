@@ -2,27 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { categories } from "../db/schema/categoriesSchema.js";
 import { colors } from "../constants/colors.js";
-
-type CategoryCreateInput = {
-	name: string;
-	color: string;
-	userId: string;
-};
-
-type RawCategory = {
-	id: number;
-	name: string;
-	color: string;
-};
-
-type Category = {
-	id: number;
-	name: string;
-	position: number;
-	color: string;
-	colorLight: string;
-	colorDark: string;
-};
+import type { RawCategory, Category, CategoryCreateInput } from "../types/categoriesTypes.js";
 
 export const getCategoriesRows = async (userId: string) => {
 	const rawCategories: RawCategory[] = await db
