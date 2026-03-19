@@ -11,7 +11,7 @@ export type InsertImportedTransactionInput = {
 	merchant: string;
 	configurationName: string;
 	userId: string;
-	categoryName: string;
+	categoryId: number;
 	month: number;
 	day: number;
 	year: number;
@@ -31,4 +31,3 @@ export type ImportCapitalOneCsvInput = {
 	csvText: string;
 	fileName?: string;
 };
-

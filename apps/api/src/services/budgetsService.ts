@@ -1,16 +1,16 @@
 import { getBudgetRows, replaceBudgetRows } from "../repositories/budgetsRepository.js";
-import { getCategoriesRows } from "../repositories/categoriesRepository.js";
 import { getNormalizedTransactions } from "./transactionsShared.js";
 import type { BudgetUpdateInput, Budget, CategoryBudget } from "../types/budgetsTypes.js";
 import { ignoredCategories, nonEditableBudgets } from "../constants/categories.js";
+import { getCategoriesRows } from "../repositories/categoriesRepository.js";
 
-const getCategoricalSpending = (transactions: { categoryName: string; amount: number; ignored: boolean }[]) => {
-	const categoricalSpending: Record<string, number> = {};
+const getCategoricalSpending = (transactions: { categoryId: number; amount: number; ignored: boolean }[]) => {
+	const categoricalSpending: Record<number, number> = {};
 
 	transactions.forEach((transaction) => {
 		if (transaction.ignored) return;
-		categoricalSpending[transaction.categoryName] =
-			(categoricalSpending[transaction.categoryName] || 0) + transaction.amount;
+		categoricalSpending[transaction.categoryId] =
+			(categoricalSpending[transaction.categoryId] || 0) + transaction.amount;
 	});
 
 	return categoricalSpending;
@@ -18,7 +18,7 @@ const getCategoricalSpending = (transactions: { categoryName: string; amount: nu
 
 export const getBudgets = async ({ month, year, userId }: { month: number; year: number; userId: string }) => {
 	const [categoryRows, budgetRows, transactions] = await Promise.all([
-		getCategoriesRows(),
+		getCategoriesRows(userId),
 		getBudgetRows(userId),
 		getNormalizedTransactions({ userId, month, year }),
 	]);
@@ -30,9 +30,9 @@ export const getBudgets = async ({ month, year, userId }: { month: number; year:
 	let totalLimit = 0;
 	let totalSpending = 0;
 	let formattedBudgets: CategoryBudget[] = categoryRows.map((category) => {
-		const matchingBudget = budgetRows.find((budget) => budget.categoryName === category.name);
+		const matchingBudget = budgetRows.find((budget) => budget.categoryId === category.id);
 		const limit = matchingBudget ? Number(matchingBudget.limit) : null;
-		const spending = categoricalSpending[category.name] || 0;
+		const spending = categoricalSpending[category.id] || 0;
 		const percentage = limit ? (spending / limit) * 100 : null;
 
 		if (!ignoredCategories.includes(category.name)) {
@@ -41,7 +41,12 @@ export const getBudgets = async ({ month, year, userId }: { month: number; year:
 		}
 
 		return {
-			...category,
+			categoryId: category.id,
+			name: category.name,
+			color: category.color,
+			colorDark: category.colorDark,
+			colorLight: category.colorLight,
+			position: category.position,
 			limit,
 			spending,
 			percentage,
@@ -52,6 +57,7 @@ export const getBudgets = async ({ month, year, userId }: { month: number; year:
 
 	// Construct total buidget with combined limit and spending across all categories
 	const totalBudget: Budget = {
+		categoryId: null,
 		name: "Total",
 		position: null,
 		limit: totalLimit > 0 ? totalLimit : null,
@@ -74,12 +80,12 @@ export const updateBudgets = async (month: number, year: number, userId: string,
 	const replacements = editableBudgets
 		.filter((budget) => budget.limit !== null && budget.limit !== "") // Filter out any budgets where there is no limit
 		.map((budget) => ({
-			categoryName: budget.name,
+			categoryId: budget.categoryId!,
 			limit: String(budget.limit),
 		}));
 
 	await replaceBudgetRows(userId, replacements);
 
-  // Call getBudgets to return new budgets (rather than result of replaceBudgetRows) due to processing occuring in getBudgets
+	// Call getBudgets to return new budgets (rather than result of replaceBudgetRows) due to processing occuring in getBudgets
 	return getBudgets({ month, year, userId });
 };

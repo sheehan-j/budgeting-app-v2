@@ -1,9 +1,11 @@
-import { integer, pgTable, text } from "drizzle-orm/pg-core";
+import { pgTable, text, bigint } from "drizzle-orm/pg-core";
+import { user } from "./authSchema.js";
 
 export const categories = pgTable("categories", {
-	name: text("name").primaryKey(),
+	id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+	name: text("name").notNull(),
 	color: text("color").notNull(),
-	colorDark: text("colorDark").notNull(),
-	position: integer("position").notNull(),
-	colorLight: text("colorLight"),
+	userId: text("userId")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
 });

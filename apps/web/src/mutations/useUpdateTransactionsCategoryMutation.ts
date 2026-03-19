@@ -3,15 +3,15 @@ import { setTransactionCategories } from "../util/apiQueries";
 
 type UpdateTransactionsCategoryVariables = {
 	transactionIds: number[];
-	categoryName: string;
+	categoryId: number;
 };
 
 export const useUpdateTransactionsCategoryMutation = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({ transactionIds, categoryName }: UpdateTransactionsCategoryVariables) => {
-			return setTransactionCategories(transactionIds, categoryName);
+		mutationFn: async ({ transactionIds, categoryId }: UpdateTransactionsCategoryVariables) => {
+			return setTransactionCategories(transactionIds, categoryId);
 		},
 		onSuccess: async () => {
 			await Promise.all([

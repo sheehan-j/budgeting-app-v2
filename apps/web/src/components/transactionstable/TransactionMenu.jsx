@@ -42,7 +42,10 @@ const TransactionMenu = ({ transaction }) => {
 		await closeAndWait();
 		setEditingMerchantSetting({
 			id: -1,
-			category: { name: transaction.categoryName },
+			category: {
+				id: transaction.categoryId,
+				name: transaction.categoryName,
+			},
 			text: transaction.merchant,
 			type: "equals",
 		});

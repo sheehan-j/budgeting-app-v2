@@ -5,9 +5,8 @@ export const merchants = pgTable("merchants", {
 	id: bigint("id", { mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
 	text: text("text").notNull(),
 	type: text("type").notNull(),
-	categoryName: text("categoryName")
+	categoryId: bigint("categoryId", { mode: "number" })
 		.notNull()
-		.references(() => categories.name, { onUpdate: "cascade" }),
+		.references(() => categories.id, { onUpdate: "cascade" }),
 	userId: text("userId").notNull(),
 });
-

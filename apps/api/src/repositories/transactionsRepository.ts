@@ -1,11 +1,47 @@
 import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
+import { categories } from "../db/schema/categoriesSchema.js";
 import { transactions } from "../db/schema/transactionsSchema.js";
 import { encryptTransactionField } from "../lib/transactionFieldCrypto.js";
 import type { InsertImportedTransactionInput, TransactionFilters } from "../types/transactionsTypes.js";
 import type { UpsertPlaidTransactionInput } from "../types/plaidTypes.js";
 
 type TransactionRow = typeof transactions.$inferSelect;
+
+const transactionWithCategorySelection = {
+	id: transactions.id,
+	date: transactions.date,
+	amount: transactions.amount,
+	merchant: transactions.merchant,
+	configurationName: transactions.configurationName,
+	userId: transactions.userId,
+	categoryId: transactions.categoryId,
+	categoryName: categories.name,
+	month: transactions.month,
+	day: transactions.day,
+	year: transactions.year,
+	ignored: transactions.ignored,
+	notes: transactions.notes,
+	plaidTransactionId: transactions.plaidTransactionId,
+	plaidItemId: transactions.plaidItemId,
+	plaidAccountId: transactions.plaidAccountId,
+	rawMerchantName: transactions.rawMerchantName,
+	authorizedDate: transactions.authorizedDate,
+	isoCurrencyCode: transactions.isoCurrencyCode,
+	pending: transactions.pending,
+	removedAt: transactions.removedAt,
+};
+
+const getTransactionsRowsByIds = async (ids: number[], userId: string) => {
+	if (ids.length === 0) return [];
+
+	return db
+		.select(transactionWithCategorySelection)
+		.from(transactions)
+		.innerJoin(categories, eq(transactions.categoryId, categories.id))
+		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
+		.orderBy(desc(transactions.id));
+};
 
 export const getTransactionsRows = async ({ month, year, limit, userId }: TransactionFilters = {}) => {
 	const conditions = [isNull(transactions.removedAt)];
@@ -16,13 +52,33 @@ export const getTransactionsRows = async ({ month, year, limit, userId }: Transa
 
 	if (limit !== undefined) {
 		return whereClause
-			? db.select().from(transactions).where(whereClause).orderBy(desc(transactions.id)).limit(limit)
-			: db.select().from(transactions).orderBy(desc(transactions.date)).limit(limit);
+			? db
+					.select(transactionWithCategorySelection)
+					.from(transactions)
+					.innerJoin(categories, eq(transactions.categoryId, categories.id))
+					.where(whereClause)
+					.orderBy(desc(transactions.id))
+					.limit(limit)
+			: db
+					.select(transactionWithCategorySelection)
+					.from(transactions)
+					.innerJoin(categories, eq(transactions.categoryId, categories.id))
+					.orderBy(desc(transactions.date))
+					.limit(limit);
 	}
 
 	return whereClause
-		? db.select().from(transactions).where(whereClause).orderBy(desc(transactions.id))
-		: db.select().from(transactions).orderBy(desc(transactions.date));
+		? db
+				.select(transactionWithCategorySelection)
+				.from(transactions)
+				.innerJoin(categories, eq(transactions.categoryId, categories.id))
+				.where(whereClause)
+				.orderBy(desc(transactions.id))
+		: db
+				.select(transactionWithCategorySelection)
+				.from(transactions)
+				.innerJoin(categories, eq(transactions.categoryId, categories.id))
+				.orderBy(desc(transactions.date));
 };
 
 export const getTransactionsRowCount = async () => {
@@ -115,34 +171,52 @@ export const markPlaidTransactionsRemovedRows = async (
 };
 
 export const updateTransactionsIgnoredRows = async (ids: number[], ignored: boolean, userId: string) => {
-	return db
+	const updatedRows = await db
 		.update(transactions)
 		.set({ ignored })
 		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
-		.returning();
+		.returning({ id: transactions.id });
+
+	return getTransactionsRowsByIds(
+		updatedRows.map((row) => row.id),
+		userId,
+	);
 };
 
-export const updateTransactionsCategoryRows = async (ids: number[], categoryName: string, userId: string) => {
-	return db
+export const updateTransactionsCategoryRows = async (ids: number[], categoryId: number, userId: string) => {
+	const updatedRows = await db
 		.update(transactions)
-		.set({ categoryName })
+		.set({ categoryId })
 		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
-		.returning();
+		.returning({ id: transactions.id });
+
+	return getTransactionsRowsByIds(
+		updatedRows.map((row) => row.id),
+		userId,
+	);
 };
 
 export const updateTransactionsNotesRows = async (ids: number[], notes: string | null, userId: string) => {
-	return db
+	const updatedRows = await db
 		.update(transactions)
 		.set({ notes })
 		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
-		.returning();
+		.returning({ id: transactions.id });
+
+	return getTransactionsRowsByIds(
+		updatedRows.map((row) => row.id),
+		userId,
+	);
 };
 
 export const deleteTransactionRows = async (ids: number[], userId: string) => {
-	return db
+	const deletedRows = await getTransactionsRowsByIds(ids, userId);
+
+	await db
 		.delete(transactions)
-		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)))
-		.returning();
+		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)));
+
+	return deletedRows;
 };
 
 export const insertImportedTransactionsRows = async (values: InsertImportedTransactionInput[]) => {

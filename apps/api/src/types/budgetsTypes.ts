@@ -4,16 +4,18 @@ export type BudgetQuery = {
 };
 
 export type BudgetUpdateInput = {
+	categoryId: number | null;
 	name: string;
 	limit: number | string | null;
 };
 
 // Parent type for all "budget" objects, accomodates both total and categorical budgets
 export type Budget = {
+	categoryId: number | null;
 	name: string;
 	color: string;
 	colorDark: string;
-	colorLight: string | null;
+	colorLight: string;
 	position: number | null; // Allow nullable since totalBudget object won't have this property
 	limit: number | null;
 	spending: number;

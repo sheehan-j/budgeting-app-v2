@@ -1,2 +1,2 @@
-export const ignoredCategories = ["Income", "Credits/Payments"];
-export const nonEditableCategories = ["Total", "Credits/Payments", "Income"];
+export const ignoredCategories = ["Income", "Payments/Transfers"];
+export const nonEditableCategories = ["Total", "Payments/Transfers", "Income"];

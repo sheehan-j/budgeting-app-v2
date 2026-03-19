@@ -41,7 +41,7 @@ const MerchantSettingsItem = ({ item, loading, setLoading, categories, merchantS
 		// Extract categoryName from category object
 		const updatedMerchantSetting = {
 			...editingMerchantSetting,
-			categoryName: editingMerchantSetting.category.name,
+			categoryId: editingMerchantSetting.category.id,
 		};
 		delete updatedMerchantSetting.category;
 
@@ -115,17 +115,22 @@ const MerchantSettingsItem = ({ item, loading, setLoading, categories, merchantS
 						<span>categorize the transaction as</span>
 						{editingMerchantSetting?.id === item.id ? (
 							<select
-								value={editingMerchantSetting.category.name}
-								onChange={(e) =>
+								value={editingMerchantSetting.category.id}
+								onChange={(e) => {
+									const nextCategory = categories.find(
+										(category) => category.id === Number(e.target.value),
+									);
+									if (!nextCategory) return;
+
 									setEditingMerchantSetting({
 										...editingMerchantSetting,
-										category: { ...editingMerchantSetting.category, name: e.target.value },
-									})
-								}
+										category: nextCategory,
+									});
+								}}
 								className="border border-slate-300 text-sm rounded outline-none p-1 bg-white"
 							>
 								{categories.map((category) => (
-									<option key={category.name} value={category.name}>
+									<option key={category.id} value={category.id}>
 										{category.name}
 									</option>
 								))}

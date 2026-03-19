@@ -115,7 +115,7 @@ transactionsRoutes.patch("/category", async (c) => {
 
 		const updatedTransactions = await setTransactionCategories(
 			bodyResult.data.ids,
-			bodyResult.data.categoryName,
+			bodyResult.data.categoryId,
 			user.id,
 		);
 		return c.json({ ok: true, transactions: updatedTransactions });

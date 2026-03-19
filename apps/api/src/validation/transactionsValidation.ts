@@ -26,7 +26,7 @@ export const updateTransactionsIgnoredBodySchema = transactionIdsSchema.extend({
 });
 
 export const updateTransactionsCategoryBodySchema = transactionIdsSchema.extend({
-	categoryName: z.string().trim().min(1),
+	categoryId: z.coerce.number().int().positive(),
 });
 
 export const updateTransactionNotesBodySchema = z.object({

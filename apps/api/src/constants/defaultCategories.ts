@@ -1,70 +1,70 @@
 export const defaultCategories = [
 	{
 		name: "Gas",
-		position: 1,
+		color: "Red",
 	},
 	{
 		name: "Other Auto",
-		position: 2,
+		color: "Dark Orange",
 	},
 	{
 		name: "Groceries",
-		position: 3,
+		color: "Orange",
 	},
 	{
 		name: "Other Supplies",
-		position: 4,
+		color: "Dark Yellow",
 	},
 	{
 		name: "Dining",
-		position: 5,
+		color: "Yellow",
 	},
 	{
 		name: "Subscriptions",
-		position: 6,
+		color: "Lime",
 	},
 	{
 		name: "Bills",
-		position: 7,
+		color: "Green",
 	},
 	{
 		name: "Entertainment",
-		position: 8,
+		color: "Teal",
 	},
 	{
 		name: "Rent & Utilities",
-		position: 9,
+		color: "Light Blue",
 	},
 	{
 		name: "Personal",
-		position: 10,
+		color: "Blue",
 	},
 	{
 		name: "Investments & Debt",
-		position: 11,
+		color: "Dark Blue",
 	},
 	{
 		name: "Home Improvement",
-		position: 12,
+		color: "Purple",
 	},
 	{
 		name: "Shopping",
-		position: 13,
+		color: "Pink",
 	},
 	{
 		name: "Travel & Vacation",
-		position: 14,
+		color: "Magenta",
 	},
 	{
 		name: "Uncategorized",
-		position: 999,
+		color: "Uncategorized Gray",
 	},
 	{
 		name: "Income",
-		position: 1000,
+		color: "Income Green",
 	},
 	{
-		name: "Credits/Payments",
-		position: 1001,
+		name: "Payments/Transfers",
+		color: "Payments/Transfers Gray",
 	},
 ];

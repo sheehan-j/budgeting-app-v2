@@ -1,8 +1,7 @@
 import { ignoredCategories } from "../constants/categories.js";
-import { getCategoriesRows } from "../repositories/categoriesRepository.js";
 import { getNormalizedTransactions } from "./transactionsShared.js";
 import type {
-  Category,
+	Category,
 	DashboardFilter,
 	DashboardRequest,
 	DashboardStatsCategory,
@@ -11,6 +10,7 @@ import type {
 	YearlySpendingResponse,
 } from "../types/dashboardTypes.js";
 import type { NormalizedTransaction } from "./transactionsShared.js";
+import { getCategoriesRows } from "../repositories/categoriesRepository.js";
 
 const filterTransactions = (transactions: NormalizedTransaction[], filters: DashboardFilter[]) => {
 	const filterTypes: DashboardFilter["type"][] = ["Date", "Merchant", "Category", "Configuration", "Amount"];
@@ -77,7 +77,7 @@ const getCategoricalSpending = (transactions: NormalizedTransaction[]) => {
 	return categoricalSpending;
 };
 
-// Special refers to when the only selected category filter is a non-spending category like "Income" or "Credits/Payments"
+// Special refers to when the only selected category filter is a non-spending category like "Income" or "Payments/Transfers"
 const handleSpecialCaseCategoryFilter = (
 	transactions: NormalizedTransaction[],
 	filters: DashboardFilter[],
@@ -95,8 +95,8 @@ const handleSpecialCaseCategoryFilter = (
 		let amount = 0;
 		if (category.name === "Income") {
 			amount = "Income" in categoricalSpending ? categoricalSpending.Income * -1 : 0;
-		} else if (category.name === "Credits/Payments") {
-			amount = "Credits/Payments" in categoricalSpending ? categoricalSpending["Credits/Payments"] : 0;
+		} else if (category.name === "Payments/Transfers") {
+			amount = "Payments/Transfers" in categoricalSpending ? categoricalSpending["Payments/Transfers"] : 0;
 		}
 
 		return {
@@ -158,7 +158,10 @@ const buildDashboardStats = (
 };
 
 export const getDashboardStats = async ({ userId, filters }: DashboardRequest) => {
-	const [transactions, categories] = await Promise.all([getNormalizedTransactions({ userId }), getCategoriesRows()]);
+	const [transactions, categories] = await Promise.all([
+		getNormalizedTransactions({ userId }),
+		getCategoriesRows(userId),
+	]);
 
 	const filteredTransactions = filterTransactions(transactions, filters);
 	const stats = buildDashboardStats(filteredTransactions, filters, categories);

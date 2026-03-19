@@ -7,6 +7,7 @@ type Transaction = {
 	merchant: string;
 	configurationName: string;
 	userId: string;
+	categoryId: number;
 	categoryName: string;
 	month: number;
 	day: number;
@@ -22,6 +23,7 @@ type TransactionCountResponse = {
 };
 
 type Category = {
+	id: number;
 	name: string;
 	position: number;
 	color: string;
@@ -41,6 +43,7 @@ type CategoryBudget = Category & {
 };
 
 type MerchantCategory = {
+	id: number;
 	name: string;
 	color: string;
 	colorDark: string;
@@ -52,7 +55,7 @@ type MerchantSetting = {
 	text: string;
 	type: string;
 	category?: MerchantCategory;
-	categoryName?: string;
+	categoryId?: number;
 	[key: string]: unknown;
 };
 
@@ -284,13 +287,13 @@ const formatTransactions = (transactions: Transaction[]): Transaction[] => {
 	return formattedTransactions;
 };
 
-export const setTransactionCategories = async (transactionIds: number[], categoryName: string): Promise<boolean> => {
+export const setTransactionCategories = async (transactionIds: number[], categoryId: number): Promise<boolean> => {
 	try {
 		if (transactionIds.length === 0) return true;
 
 		await apiClient.patch("/transactions/category", {
 			ids: transactionIds,
-			categoryName,
+			categoryId,
 		});
 		return true;
 	} catch {
@@ -393,12 +396,17 @@ export const updateBudget = async (
 			{
 				month: number;
 				year: number;
-				budgets: { name: string; limit: number | string | null | undefined }[];
+				budgets: {
+					categoryId: number | null;
+					name: string;
+					limit: number | string | null | undefined;
+				}[];
 			}
 		>("/budgets", {
 			month: Number(month),
 			year: Number(year),
 			budgets: newBudgets.map((budget) => ({
+				categoryId: budget.categoryId ?? null,
 				name: budget.name,
 				limit: budget.limit ?? null,
 			})),

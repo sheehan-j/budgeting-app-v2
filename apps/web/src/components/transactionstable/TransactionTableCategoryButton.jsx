@@ -29,14 +29,14 @@ const TransactionTableCategoryButton = ({ transaction, categories, categoriesLoa
 		open();
 	};
 
-	const onClickCategory = async (categoryName) => {
+	const onClickCategory = async (categoryId) => {
 		if (updateTransactionsCategoryMutation.isPending) return;
 
 		await closeAndWait();
 
 		updateTransactionsCategoryMutation.mutate({
 			transactionIds: [transaction.id],
-			categoryName,
+			categoryId,
 		});
 	};
 
@@ -90,7 +90,7 @@ const TransactionTableCategoryButton = ({ transaction, categories, categoriesLoa
 												borderWidth: "1px",
 												borderColor: category.colorDark,
 											}}
-											onClick={() => onClickCategory(category.name)}
+											onClick={() => onClickCategory(category.id)}
 										>
 											{category.name}
 										</button>

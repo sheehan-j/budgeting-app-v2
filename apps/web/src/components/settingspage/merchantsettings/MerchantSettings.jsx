@@ -48,7 +48,12 @@ const MerchantSettings = () => {
 			setEditingMerchantSetting(null);
 			return;
 		}
-		setEditingMerchantSetting({ id: -1, category: { name: "Uncategorized" }, text: "", type: "contains" });
+		const uncategorizedCategory = categories?.find((category) => category.name === "Uncategorized");
+		if (!uncategorizedCategory) {
+			setNotification({ type: "error", message: 'Could not find the "Uncategorized" category.' });
+			return;
+		}
+		setEditingMerchantSetting({ id: -1, category: uncategorizedCategory, text: "", type: "contains" });
 		setScrollToNewMerchantSetting(true);
 	};
 

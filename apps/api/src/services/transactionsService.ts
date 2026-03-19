@@ -12,6 +12,7 @@ import { parseCapitalOneCsv } from "../lib/capitalOneCsv.js";
 import type { ImportCapitalOneCsvInput, TransactionFilters } from "../types/transactionsTypes.js";
 import { getMerchantSettings } from "./merchantSettingsService.js";
 import { getPlaidItems } from "./plaidService.js";
+import { getCategoriesRows } from "../repositories/categoriesRepository.js";
 
 export const getTransactions = async (userId: string, filters: TransactionFilters = {}) => {
 	return getNormalizedTransactions({ ...filters, userId });
@@ -21,21 +22,22 @@ export const getTransactionsCount = async (userId: string) => {
 	return getTransactionsRowCountByUser(userId);
 };
 
-const getCategoryNameForMerchant = (
+const getCategoryIdForMerchant = (
 	merchant: string,
 	merchantSettings: Awaited<ReturnType<typeof getMerchantSettings>>,
+	defaultCategoryId: number,
 ) => {
-	let categoryName = "Uncategorized";
+	let categoryId = defaultCategoryId;
 
 	for (const merchantSetting of merchantSettings) {
 		if (merchantSetting.type === "contains" && merchant.includes(merchantSetting.text)) {
-			categoryName = merchantSetting.category.name;
+			categoryId = merchantSetting.category.id;
 		} else if (merchantSetting.type === "equals" && merchant === merchantSetting.text) {
-			categoryName = merchantSetting.category.name;
+			categoryId = merchantSetting.category.id;
 		}
 	}
 
-	return categoryName;
+	return categoryId;
 };
 
 const getDateParts = (date: string) => {
@@ -65,8 +67,8 @@ export const setTransactionsIgnored = async (ids: number[], ignored: boolean, us
 	return normalizeTransactions(rows);
 };
 
-export const setTransactionCategories = async (ids: number[], categoryName: string, userId: string) => {
-	const rows = await updateTransactionsCategoryRows(ids, categoryName, userId);
+export const setTransactionCategories = async (ids: number[], categoryId: number, userId: string) => {
+	const rows = await updateTransactionsCategoryRows(ids, categoryId, userId);
 	return normalizeTransactions(rows);
 };
 
@@ -76,37 +78,46 @@ export const setTransactionNotes = async (ids: number[], notes: string | null, u
 };
 
 export const applyMerchantSettingsToTransactions = async (userId: string) => {
-	const [transactions, merchantSettings] = await Promise.all([
+	const [transactions, merchantSettings, categoryRows] = await Promise.all([
 		getNormalizedTransactions({ userId }),
 		getMerchantSettings(userId),
+		getCategoriesRows(userId),
 	]);
+	const uncategorizedCategory = categoryRows.find((category) => category.name === "Uncategorized");
+	if (!uncategorizedCategory) {
+		throw new Error('Default "Uncategorized" category not found.');
+	}
 
-	const idsByCategoryName = new Map<string, number[]>();
+	const idsByCategoryId = new Map<number, number[]>();
 
 	for (const transaction of transactions) {
-		let nextCategoryName = transaction.categoryName;
+		let nextCategoryId = transaction.categoryId;
 
 		for (const merchantSetting of merchantSettings) {
 			if (merchantSetting.type === "contains" && transaction.merchant.includes(merchantSetting.text)) {
-				nextCategoryName = merchantSetting.category.name;
+				nextCategoryId = merchantSetting.category.id;
 			} else if (merchantSetting.type === "equals" && transaction.merchant === merchantSetting.text) {
-				nextCategoryName = merchantSetting.category.name;
+				nextCategoryId = merchantSetting.category.id;
 			}
 		}
 
-		if (nextCategoryName === transaction.categoryName) continue;
+		if (!nextCategoryId) {
+			nextCategoryId = uncategorizedCategory.id;
+		}
 
-		const matchingIds = idsByCategoryName.get(nextCategoryName) ?? [];
+		if (nextCategoryId === transaction.categoryId) continue;
+
+		const matchingIds = idsByCategoryId.get(nextCategoryId) ?? [];
 		matchingIds.push(transaction.id);
-		idsByCategoryName.set(nextCategoryName, matchingIds);
+		idsByCategoryId.set(nextCategoryId, matchingIds);
 	}
 
-	for (const [categoryName, ids] of idsByCategoryName.entries()) {
-		await updateTransactionsCategoryRows(ids, categoryName, userId);
+	for (const [categoryId, ids] of idsByCategoryId.entries()) {
+		await updateTransactionsCategoryRows(ids, categoryId, userId);
 	}
 
 	return {
-		updatedCount: Array.from(idsByCategoryName.values()).reduce((count, ids) => count + ids.length, 0),
+		updatedCount: Array.from(idsByCategoryId.values()).reduce((count, ids) => count + ids.length, 0),
 	};
 };
 
@@ -147,10 +158,15 @@ export const importCapitalOneCsvTransactions = async (
 		throw new Error("No transactions were found in this CSV.");
 	}
 
-	const [merchantSettings, existingTransactions] = await Promise.all([
+	const [merchantSettings, existingTransactions, categoryRows] = await Promise.all([
 		getMerchantSettings(userId),
 		getTransactionsRowsByPlaidAccount(accountId, userId),
+		getCategoriesRows(userId),
 	]);
+	const uncategorizedCategory = categoryRows.find((category) => category.name === "Uncategorized");
+	if (!uncategorizedCategory) {
+		throw new Error('Default "Uncategorized" category not found.');
+	}
 	const existingTransactionSignatures = new Set(
 		existingTransactions.map((transaction) =>
 			buildTransactionSignature({
@@ -195,7 +211,7 @@ export const importCapitalOneCsvTransactions = async (
 				merchant: transaction.merchant,
 				configurationName: account.name,
 				userId,
-				categoryName: getCategoryNameForMerchant(transaction.merchant, merchantSettings),
+				categoryId: getCategoryIdForMerchant(transaction.merchant, merchantSettings, uncategorizedCategory.id),
 				month,
 				day,
 				year,

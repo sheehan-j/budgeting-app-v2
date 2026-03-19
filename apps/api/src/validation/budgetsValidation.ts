@@ -10,6 +10,7 @@ export const budgetsUpdateBodySchema = z.object({
 	year: z.coerce.number().int(),
 	budgets: z.array(
     z.object({
+      categoryId: z.coerce.number().int().positive().nullable(),
       name: z.string().trim().min(1),
       limit: z.union([z.number(), z.string(), z.null()]).transform((value) => (value === "" ? null : value)),
     })
