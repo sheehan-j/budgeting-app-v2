@@ -7,6 +7,7 @@ import {
 	getTransactions,
 	getTransactionsCount,
 	importCapitalOneCsvTransactions,
+	recategorizeTransactions,
 	setTransactionCategories,
 	setTransactionNotes,
 	setTransactionsIgnored,
@@ -16,11 +17,13 @@ import {
 	deleteTransactionsBodySchema,
 	getTransactionsQuerySchema,
 	importCapitalOneCsvBodySchema,
+	recategorizeTransactionsBodySchema,
 	transactionIdParamsSchema,
 	updateTransactionNotesBodySchema,
 	updateTransactionsCategoryBodySchema,
 	updateTransactionsIgnoredBodySchema,
 } from "../validation/transactionsValidation.js";
+import { validateCategoriesOwnership } from "../services/categoriesService.js";
 
 const transactionsRoutes = new Hono<AppBindings>();
 
@@ -161,6 +164,32 @@ transactionsRoutes.patch("/:id/notes", async (c) => {
 	} catch (error) {
 		console.error(error);
 		return c.json({ error: "Failed to update transaction notes" }, 500);
+	}
+});
+
+transactionsRoutes.post("/recategorize", async (c) => {
+	try {
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
+		const bodyResult = recategorizeTransactionsBodySchema.safeParse(await c.req.json());
+		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
+
+		if (
+			!validateCategoriesOwnership([bodyResult.data.initialCategoryId, bodyResult.data.targetCategoryId], user.id)
+		) {
+			throw new Error("An invalid category ID was provided");
+		}
+
+		const updatedCount = await recategorizeTransactions(
+			bodyResult.data.initialCategoryId,
+			bodyResult.data.targetCategoryId,
+			user.id,
+		);
+		return c.json({ ok: true, updatedCount });
+	} catch (error) {
+		console.error(error);
+		return c.json({ error: "Failed to apply merchant settings" }, 500);
 	}
 });
 

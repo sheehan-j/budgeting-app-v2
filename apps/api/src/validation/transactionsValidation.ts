@@ -33,8 +33,12 @@ export const updateTransactionNotesBodySchema = z.object({
 	notes: z.union([z.string(), z.null()]).transform((value) => (value === "" ? null : value)),
 });
 
-export const applyMerchantSettingsBodySchema = z.object({
-}).strict();
+export const applyMerchantSettingsBodySchema = z.object({}).strict();
+
+export const recategorizeTransactionsBodySchema = z.object({
+	initialCategoryId: z.coerce.number().int().positive(),
+	targetCategoryId: z.coerce.number().int().positive(),
+});
 
 export const importCapitalOneCsvBodySchema = z.object({
 	itemId: z.coerce.number().int().positive(),

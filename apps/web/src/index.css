@@ -67,9 +67,28 @@ body {
 	}
 }
 
+@keyframes backdropFadeIn {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+@keyframes backdropFadeOut {
+	0% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
 .dropdown-down,
 .dropdown-up,
-.modal {
+.modal-backdrop,
+.modal-panel {
 	animation-fill-mode: forwards;
 }
 
@@ -93,12 +112,22 @@ body {
 	animation-duration: 0.1s;
 }
 
-.modal.enter {
+.modal-backdrop.enter {
+	animation-name: backdropFadeIn;
+	animation-duration: 0.1s;
+}
+
+.modal-backdrop.exit {
+	animation-name: backdropFadeOut;
+	animation-duration: 0.1s;
+}
+
+.modal-panel.enter {
 	animation-name: fadeInUp;
 	animation-duration: 0.1s;
 }
 
-.modal.exit {
+.modal-panel.exit {
 	animation-name: fadeOutDown;
 	animation-duration: 0.1s;
 }

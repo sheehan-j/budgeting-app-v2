@@ -73,13 +73,13 @@ const RemovePlaidItemModal = () => {
 					onAnimationEnd={handleAnimationEnd}
 					onClick={submitting ? undefined : close}
 					className={`${animationClass}
-        z-[99] overflow-hidden modal top-0 left-0 absolute w-full h-full flex items-center justify-center bg-[rgba(0,0,0,0.25)]`}
+        z-[99] overflow-hidden modal-backdrop top-0 left-0 absolute w-full h-full flex items-center justify-center bg-[rgba(0,0,0,0.25)]`}
 				>
 					<div
 						onClick={(e) => {
 							e.stopPropagation();
 						}}
-						className="w-1/2 xl:w-1/3 overflow-hidden flex flex-col gap-3 bg-white rounded-xl border border-slate-200 p-4"
+						className={`${animationClass} modal-panel w-1/2 xl:w-1/3 overflow-hidden flex flex-col gap-3 bg-white rounded-xl border border-slate-200 p-4`}
 					>
 						<div className="text-base text-slate-600 font-semibold">
 							Remove {institutionName || "Institution"}
