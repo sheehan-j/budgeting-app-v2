@@ -1,7 +1,7 @@
-export type CategoryCreateInput = {
+export type CategoryInput = {
+	id?: number;
 	name: string;
 	color: string;
-	userId: string;
 };
 
 export type RawCategory = {
@@ -13,6 +13,7 @@ export type RawCategory = {
 export type Category = {
 	id: number;
 	name: string;
+	colorName: string;
 	color: string;
 	position: number;
 	colorDark: string;

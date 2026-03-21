@@ -1,3 +1,5 @@
+export const nonCustomizableColors = ["Uncategorized Gray", "Income Green", "Payments/Transfers Gray"];
+
 export const colors: Record<
 	string,
 	{

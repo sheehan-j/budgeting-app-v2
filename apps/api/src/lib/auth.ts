@@ -41,11 +41,7 @@ export const auth = betterAuth({
 			create: {
 				// Insert default categories for the user upon creation but before request completes
 				async after(user) {
-					await createCategoriesRows(
-						defaultCategories.map((category) => {
-							return { ...category, userId: user.id };
-						}),
-					);
+					await createCategoriesRows(defaultCategories, user.id);
 				},
 			},
 		},

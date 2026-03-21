@@ -1,8 +1,9 @@
+import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useDataStore } from "./util/dataStore";
+import { getApiErrorMessage } from "./util/apiError";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App.jsx";
-import { useDataStore } from "./util/dataStore";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -10,7 +11,7 @@ const queryClient = new QueryClient({
 		onError: (error) => {
 			useDataStore.getState().setNotification({
 				type: "error",
-				message: error instanceof Error ? error.message : "Request failed.",
+				message: getApiErrorMessage(error),
 			});
 		},
 	}),

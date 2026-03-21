@@ -1,3 +1,4 @@
+import { ZodNumberFormat } from "better-auth";
 import apiClient from "./apiClient";
 
 type Transaction = {
@@ -29,6 +30,12 @@ type Category = {
 	color: string;
 	colorDark: string;
 	colorLight?: string | null;
+};
+
+type CategoryInput = {
+	id?: number;
+	name: string;
+	color: string;
 };
 
 type BudgetRecord = {
@@ -177,6 +184,11 @@ type ApplyMerchantSettingsResponse = {
 	updatedCount: number;
 };
 
+type RecagetorizeTransactionsResponse = {
+	ok: boolean;
+	updatedCount: number;
+};
+
 type PlaidLinkTokenResponse = {
 	linkToken: string;
 	expiration: string;
@@ -224,6 +236,15 @@ type ImportCapitalOneCsvResponse = {
 	importedRangeStart: string | null;
 	importedRangeEnd: string | null;
 };
+
+type Color = {
+	position: number;
+	color: string;
+	colorDark: string;
+	colorLight: string;
+};
+
+type ColorsByName = Record<string, Color>;
 
 type OkResponse = {
 	ok: boolean;
@@ -349,6 +370,16 @@ export const getCategories = async (): Promise<Category[]> => {
 	}
 };
 
+export const saveCategory = async (input: CategoryInput): Promise<boolean> => {
+	const response = await apiClient.put<OkResponse>("/categories", input);
+	return response.ok;
+};
+
+export const deleteCategory = async (categoryId: number): Promise<boolean> => {
+	const response = await apiClient.del<OkResponse>(`/categories/${categoryId}`);
+	return response.ok;
+};
+
 export const getDashboardData = async (filters: DashboardFilter[]): Promise<DashboardResponse> => {
 	try {
 		const data = await apiClient.post<DashboardResponse, { filters: DashboardFilter[] }>("/dashboard/stats", {
@@ -406,7 +437,7 @@ export const updateBudget = async (
 			month: Number(month),
 			year: Number(year),
 			budgets: newBudgets.map((budget) => ({
-				categoryId: budget.categoryId ?? null,
+				categoryId: budget.id ?? null,
 				name: budget.name,
 				limit: budget.limit ?? null,
 			})),
@@ -455,6 +486,25 @@ export const applyMerchantSettingsToExistingTransactions = async (): Promise<num
 		return response.updatedCount;
 	} catch {
 		return throwWithMessage("Could not apply merchant settings to existing transactions.");
+	}
+};
+
+export const recategorizeTransactions = async (
+	initialCategoryId: number,
+	targetCategoryId: number,
+): Promise<number> => {
+	try {
+		const response = await apiClient.post<
+			RecagetorizeTransactionsResponse,
+			{ initialCategoryId: number; targetCategoryId: number }
+		>("/transactions/recategorize", {
+			initialCategoryId,
+			targetCategoryId,
+		});
+
+		return response.updatedCount;
+	} catch {
+		return throwWithMessage("Could not recategorize transactions.");
 	}
 };
 
@@ -556,9 +606,18 @@ export const importCapitalOneCsv = async (
 	}
 };
 
+export const getColors = async (): Promise<ColorsByName> => {
+	try {
+		return await apiClient.get<ColorsByName>("/categories/colors");
+	} catch (error) {
+		return throwWithMessage(error instanceof Error ? error.message : "Could not fetch categories colors.");
+	}
+};
+
 export type {
 	Transaction,
 	Category,
+	CategoryInput,
 	CategoryBudget,
 	MerchantSetting,
 	PlaidAccount,
@@ -568,4 +627,6 @@ export type {
 	DashboardFilter,
 	DashboardStats,
 	DashboardResponse,
+	Color,
+	ColorsByName,
 };

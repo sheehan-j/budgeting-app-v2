@@ -1,9 +1,11 @@
+import { ApiError } from "./apiError";
+
 type QueryValue = string | number | boolean;
 type QueryParams = Record<string, QueryValue | null | undefined>;
 type RequestOptions<TBody> = {
 	body?: TBody;
 	query?: QueryParams;
-};
+}
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
 const resolveBaseUrl = (value: string) => {
@@ -54,8 +56,11 @@ const request = async <TResponse, TBody = unknown>(
 	const data = contentType.includes("application/json") ? await response.json() : null;
 
 	if (!response.ok) {
-		const errorMessage = data?.error || response.statusText || "Request failed";
-		throw new Error(typeof errorMessage === "string" ? errorMessage : "Request failed");
+		throw new ApiError(data?.message || "Request failed", {
+			status: response.status,
+			fieldErrors: data?.fieldErrors,
+			data,
+		});
 	}
 
 	return data as TResponse;
@@ -63,7 +68,7 @@ const request = async <TResponse, TBody = unknown>(
 
 const apiClient = {
 	get: <TResponse>(path: string, query?: QueryParams) => request<TResponse>("GET", path, { query }),
-  post: <TResponse, TBody = unknown>(path: string, body: TBody) => request<TResponse, TBody>("POST", path, { body }),
+	post: <TResponse, TBody = unknown>(path: string, body: TBody) => request<TResponse, TBody>("POST", path, { body }),
 	put: <TResponse, TBody = unknown>(path: string, body: TBody) => request<TResponse, TBody>("PUT", path, { body }),
 	patch: <TResponse, TBody = unknown>(path: string, body: TBody) =>
 		request<TResponse, TBody>("PATCH", path, { body }),

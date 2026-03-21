@@ -82,10 +82,7 @@ export const getTransactionsRows = async ({ month, year, limit, userId }: Transa
 };
 
 export const getTransactionsRowCount = async () => {
-	const result = await db
-		.select({ count: count() })
-		.from(transactions)
-		.where(isNull(transactions.removedAt));
+	const result = await db.select({ count: count() }).from(transactions).where(isNull(transactions.removedAt));
 	return result[0]?.count ?? 0;
 };
 
@@ -212,11 +209,22 @@ export const updateTransactionsNotesRows = async (ids: number[], notes: string |
 export const deleteTransactionRows = async (ids: number[], userId: string) => {
 	const deletedRows = await getTransactionsRowsByIds(ids, userId);
 
-	await db
-		.delete(transactions)
-		.where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)));
+	await db.delete(transactions).where(and(inArray(transactions.id, ids), eq(transactions.userId, userId)));
 
 	return deletedRows;
+};
+
+export const recategorizeTransactionRows = async (
+	initialCategoryId: number,
+	targetCategoryId: number,
+	userId: string,
+) => {
+	const result = await db
+		.update(transactions)
+		.set({ categoryId: targetCategoryId })
+		.where(and(eq(transactions.categoryId, initialCategoryId), eq(transactions.userId, userId)))
+		.returning();
+	return result.length;
 };
 
 export const insertImportedTransactionsRows = async (values: InsertImportedTransactionInput[]) => {

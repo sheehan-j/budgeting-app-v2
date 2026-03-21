@@ -6,6 +6,7 @@ import {
 	updateTransactionsCategoryRows,
 	updateTransactionsIgnoredRows,
 	updateTransactionsNotesRows,
+	recategorizeTransactionRows,
 } from "../repositories/transactionsRepository.js";
 import { getNormalizedTransactions, normalizeTransactions } from "./transactionsShared.js";
 import { parseCapitalOneCsv } from "../lib/capitalOneCsv.js";
@@ -124,6 +125,10 @@ export const applyMerchantSettingsToTransactions = async (userId: string) => {
 export const deleteTransactions = async (ids: number[], userId: string) => {
 	const rows = await deleteTransactionRows(ids, userId);
 	return normalizeTransactions(rows);
+};
+
+export const recategorizeTransactions = async (initialCategoryId: number, targetCategoryId: number, userId: string) => {
+	return await recategorizeTransactionRows(initialCategoryId, targetCategoryId, userId);
 };
 
 // IMPORTING FUNCTIONALITY
