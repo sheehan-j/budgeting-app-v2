@@ -64,14 +64,17 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 							onChange={(e) =>
 								setSelectedFilterOptions({
 									...selectedFilterOptions,
-									start: { ...selectedFilterOptions.start, year: e.target.value },
-									end: { ...selectedFilterOptions.end, year: e.target.value },
+									start: { ...selectedFilterOptions.start, year: Number(e.target.value) },
+									end: { ...selectedFilterOptions.end, year: Number(e.target.value) },
 								})
 							}
 							className="add-filter-option flex-[1.8_0_0] w-full text-xs border border-slate-200 rounded p-1 bg-white outline-none"
 						>
 							{Array.from({ length: new Date().getFullYear() - 2010 + 1 }, (_, index) => (
-								<option key={new Date().getFullYear() - index} value={new Date().getFullYear() - index}>
+								<option
+									key={new Date().getFullYear() - index}
+									value={Number(new Date().getFullYear() - index)}
+								>
 									{new Date().getFullYear() - index}
 								</option>
 							))}
@@ -91,7 +94,7 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 										...selectedFilterOptions,
 										start: {
 											...selectedFilterOptions.start,
-											month: e.target.value,
+											month: Number(e.target.value),
 											day:
 												selectedFilterOptions.start.day > daysByMonth[e.target.value].length
 													? daysByMonth[e.target.value].length
@@ -112,7 +115,7 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 								onChange={(e) =>
 									setSelectedFilterOptions({
 										...selectedFilterOptions,
-										start: { ...selectedFilterOptions.start, day: e.target.value },
+										start: { ...selectedFilterOptions.start, day: Number(e.target.value) },
 									})
 								}
 								className="add-filter-option flex-[1.1_0_0] w-full text-xs border border-slate-200 rounded p-1 bg-white outline-none"
@@ -128,7 +131,7 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 								onChange={(e) =>
 									setSelectedFilterOptions({
 										...selectedFilterOptions,
-										start: { ...selectedFilterOptions.start, year: e.target.value },
+										start: { ...selectedFilterOptions.start, year: Number(e.target.value) },
 									})
 								}
 								className="add-filter-option flex-[1.8_0_0] w-full text-xs border border-slate-200 rounded p-1 bg-white outline-none"
@@ -136,7 +139,7 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 								{Array.from({ length: new Date().getFullYear() - 2010 + 1 }, (_, index) => (
 									<option
 										key={new Date().getFullYear() - index}
-										value={new Date().getFullYear() - index}
+										value={Number(new Date().getFullYear() - index)}
 									>
 										{new Date().getFullYear() - index}
 									</option>
@@ -154,7 +157,7 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 										...selectedFilterOptions,
 										end: {
 											...selectedFilterOptions.end,
-											month: e.target.value,
+											month: Number(e.target.value),
 											day:
 												selectedFilterOptions.end.day > daysByMonth[e.target.value].length
 													? daysByMonth[e.target.value].length
@@ -175,7 +178,7 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 								onChange={(e) =>
 									setSelectedFilterOptions({
 										...selectedFilterOptions,
-										end: { ...selectedFilterOptions.end, day: e.target.value },
+										end: { ...selectedFilterOptions.end, day: Number(e.target.value) },
 									})
 								}
 								className="add-filter-option flex-[1.1_0_0] w-full text-xs border border-slate-200 rounded p-1 bg-white outline-none"
@@ -191,7 +194,7 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 								onChange={(e) =>
 									setSelectedFilterOptions({
 										...selectedFilterOptions,
-										end: { ...selectedFilterOptions.end, year: e.target.value },
+										end: { ...selectedFilterOptions.end, year: Number(e.target.value) },
 									})
 								}
 								className="add-filter-option flex-[1.8_0_0] w-full text-xs border border-slate-200 rounded p-1 bg-white outline-none"
@@ -223,7 +226,7 @@ const DateFilterMenu = ({ selectedFilterOptions, setSelectedFilterOptions }) => 
 								filter?.start?.year === tempSelectedFilterOptions.start.year &&
 								filter?.end?.month === tempSelectedFilterOptions.end.month &&
 								filter?.end?.day === tempSelectedFilterOptions.end.day &&
-								filter?.end?.year === tempSelectedFilterOptions.end.year
+								filter?.end?.year === tempSelectedFilterOptions.end.year,
 						)
 					) {
 						return;
