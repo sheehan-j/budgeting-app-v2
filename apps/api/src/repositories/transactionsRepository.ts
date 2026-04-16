@@ -108,6 +108,20 @@ export const getTransactionsRowsByPlaidAccount = async (plaidAccountId: number, 
 		.orderBy(desc(transactions.date), desc(transactions.id));
 };
 
+export const getTransactionsRowsByConfigurationName = async (configurationName: string, userId: string) => {
+	return db
+		.select()
+		.from(transactions)
+		.where(
+			and(
+				eq(transactions.userId, userId),
+				eq(transactions.configurationName, configurationName),
+				isNull(transactions.removedAt),
+			),
+		)
+		.orderBy(desc(transactions.date), desc(transactions.id));
+};
+
 export const upsertPlaidTransactionsRows = async (values: UpsertPlaidTransactionInput[]) => {
 	if (values.length === 0) return [];
 

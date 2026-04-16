@@ -474,7 +474,7 @@ const PlaidConnections = () => {
 						<div className="text-lg text-slate-600 font-semibold">Connected Accounts</div>
 						<div className="text-sm text-slate-500 mt-1 max-w-2xl">
 							Connect institutions with Plaid to import transactions and keep them in sync with your
-							budgeting data.
+							budgeting data
 						</div>
 					</div>
 					<div className="flex gap-2 flex-wrap">

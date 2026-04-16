@@ -7,6 +7,7 @@ import {
 	getTransactions,
 	getTransactionsCount,
 	importCapitalOneCsvTransactions,
+	importAppleCsvTransactions,
 	recategorizeTransactions,
 	setTransactionCategories,
 	setTransactionNotes,
@@ -17,6 +18,7 @@ import {
 	deleteTransactionsBodySchema,
 	getTransactionsQuerySchema,
 	importCapitalOneCsvBodySchema,
+	importAppleCsvBodySchema,
 	recategorizeTransactionsBodySchema,
 	transactionIdParamsSchema,
 	updateTransactionNotesBodySchema,
@@ -211,6 +213,30 @@ transactionsRoutes.post("/import/capital-one", async (c) => {
 		return c.json(
 			{
 				error: error instanceof Error ? error.message : "Failed to import Capital One CSV transactions",
+			},
+			400,
+		);
+	}
+});
+
+transactionsRoutes.post("/import/apple", async (c) => {
+	try {
+		if (!(String(process.env.IMPORT_ENABLED ?? "").toLowerCase() === "true"))
+			return c.json({ error: "This feature is disabled" }, 403);
+
+		const user = getAuthenticatedUser(c);
+		if (!user) return unauthorized(c);
+
+		const bodyResult = importAppleCsvBodySchema.safeParse(await c.req.json());
+		if (!bodyResult.success) return badRequest(c, z.flattenError(bodyResult.error));
+
+		const result = await importAppleCsvTransactions(bodyResult.data, user.id);
+		return c.json({ ok: true, ...result });
+	} catch (error) {
+		console.error(error);
+		return c.json(
+			{
+				error: error instanceof Error ? error.message : "Failed to import Apple CSV transactions",
 			},
 			400,
 		);

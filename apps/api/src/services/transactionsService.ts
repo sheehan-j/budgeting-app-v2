@@ -1,6 +1,7 @@
 import {
 	deleteTransactionRows,
 	getTransactionsRowsByPlaidAccount,
+	getTransactionsRowsByConfigurationName,
 	insertImportedTransactionsRows,
 	getTransactionsRowCountByUser,
 	updateTransactionsCategoryRows,
@@ -10,7 +11,8 @@ import {
 } from "../repositories/transactionsRepository.js";
 import { getNormalizedTransactions, normalizeTransactions } from "./transactionsShared.js";
 import { parseCapitalOneCsv } from "../lib/capitalOneCsv.js";
-import type { ImportCapitalOneCsvInput, TransactionFilters } from "../types/transactionsTypes.js";
+import { parseAppleCsv } from "../lib/appleCsv.js";
+import type { ImportCapitalOneCsvInput, ImportAppleCsvInput, TransactionFilters } from "../types/transactionsTypes.js";
 import { getMerchantSettings } from "./merchantSettingsService.js";
 import { getPlaidItems } from "./plaidService.js";
 import { getCategoriesRows } from "../repositories/categoriesRepository.js";
@@ -237,6 +239,96 @@ export const importCapitalOneCsvTransactions = async (
 	return {
 		institutionName: item.institutionName,
 		accountName: account.name,
+		insertedCount: importRows.length,
+		duplicateSkippedCount,
+		overlapSkippedCount,
+		importedRangeStart: getImportedRangeValue(importedDates, "min"),
+		importedRangeEnd: getImportedRangeValue(importedDates, "max"),
+	};
+};
+
+const APPLE_CARD_CONFIGURATION_NAME = "Apple Card";
+
+export const importAppleCsvTransactions = async ({ csvText }: ImportAppleCsvInput, userId: string) => {
+	const parsedTransactions = parseAppleCsv(csvText);
+	if (parsedTransactions.length === 0) {
+		throw new Error("No transactions were found in this CSV.");
+	}
+
+	const [merchantSettings, existingTransactions, categoryRows] = await Promise.all([
+		getMerchantSettings(userId),
+		getTransactionsRowsByConfigurationName(APPLE_CARD_CONFIGURATION_NAME, userId),
+		getCategoriesRows(userId),
+	]);
+	const uncategorizedCategory = categoryRows.find((category) => category.name === "Uncategorized");
+	if (!uncategorizedCategory) {
+		throw new Error('Default "Uncategorized" category not found.');
+	}
+	const existingTransactionSignatures = new Set(
+		existingTransactions.map((transaction) =>
+			buildTransactionSignature({
+				date: transaction.date,
+				amount: transaction.amount,
+				merchant: transaction.merchant,
+			}),
+		),
+	);
+
+	const firstExistingTransaction = existingTransactions[0];
+	const oldestExistingDate = firstExistingTransaction
+		? existingTransactions.reduce(
+				(oldest, transaction) => (transaction.date < oldest ? transaction.date : oldest),
+				firstExistingTransaction.date,
+			)
+		: null;
+
+	let duplicateSkippedCount = 0;
+	let overlapSkippedCount = 0;
+	const importedDates: string[] = [];
+	const importRows = parsedTransactions.flatMap((transaction) => {
+		if (oldestExistingDate && transaction.date >= oldestExistingDate) {
+			overlapSkippedCount += 1;
+			return [];
+		}
+
+		const signature = buildTransactionSignature(transaction);
+		if (existingTransactionSignatures.has(signature)) {
+			duplicateSkippedCount += 1;
+			return [];
+		}
+
+		existingTransactionSignatures.add(signature);
+		importedDates.push(transaction.date);
+		const { year, month, day } = getDateParts(transaction.date);
+
+		return [
+			{
+				date: transaction.date,
+				amount: transaction.amount,
+				merchant: transaction.merchant,
+				configurationName: APPLE_CARD_CONFIGURATION_NAME,
+				userId,
+				categoryId: getCategoryIdForMerchant(transaction.merchant, merchantSettings, uncategorizedCategory.id),
+				month,
+				day,
+				year,
+				plaidTransactionId: null,
+				plaidItemId: null,
+				plaidAccountId: null,
+				rawMerchantName: transaction.rawMerchantName,
+				authorizedDate: null,
+				isoCurrencyCode: "USD",
+				pending: false,
+				removedAt: null,
+			},
+		];
+	});
+
+	await insertImportedTransactionsRows(importRows);
+
+	return {
+		institutionName: "Apple",
+		accountName: APPLE_CARD_CONFIGURATION_NAME,
 		insertedCount: importRows.length,
 		duplicateSkippedCount,
 		overlapSkippedCount,

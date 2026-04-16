@@ -2,7 +2,7 @@ export type TransactionFilters = {
 	month?: number;
 	year?: number;
 	limit?: number;
-  userId?: string;
+	userId?: string;
 };
 
 export type InsertImportedTransactionInput = {
@@ -15,8 +15,8 @@ export type InsertImportedTransactionInput = {
 	month: number;
 	day: number;
 	year: number;
-	plaidItemId: number;
-	plaidAccountId: number;
+	plaidItemId: number | null;
+	plaidAccountId: number | null;
 	plaidTransactionId?: string | null;
 	rawMerchantName: string | null;
 	authorizedDate: string | null;
@@ -28,6 +28,11 @@ export type InsertImportedTransactionInput = {
 export type ImportCapitalOneCsvInput = {
 	itemId: number;
 	accountId: number;
+	csvText: string;
+	fileName?: string;
+};
+
+export type ImportAppleCsvInput = {
 	csvText: string;
 	fileName?: string;
 };
