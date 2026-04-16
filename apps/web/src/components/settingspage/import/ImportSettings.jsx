@@ -3,8 +3,6 @@ import ButtonSpinner from "../../common/ButtonSpinner";
 import { useDataStore } from "../../../util/dataStore";
 import { useImportAppleCsvMutation } from "../../../mutations/useImportAppleCsvMutation";
 
-const IMPORT_ENABLED = String(import.meta.env.VITE_IMPORT_ENABLED ?? "").toLowerCase() === "true";
-
 const formatIsoDateLabel = (value) => {
 	if (!value) return null;
 	const [year, month, day] = value.split("-");
@@ -84,15 +82,6 @@ const ImportSettings = () => {
 			});
 		}
 	};
-
-	if (!IMPORT_ENABLED) {
-		return (
-			<div className="grow flex flex-col p-6 overflow-y-auto">
-				<h2 className="text-lg font-semibold text-slate-800">Import</h2>
-				<p className="text-sm text-slate-500 mt-1">CSV import is not enabled.</p>
-			</div>
-		);
-	}
 
 	return (
 		<div className="grow flex flex-col p-6 overflow-y-auto">
