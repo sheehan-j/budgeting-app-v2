@@ -237,6 +237,17 @@ type ImportCapitalOneCsvResponse = {
 	importedRangeEnd: string | null;
 };
 
+type ImportAppleCsvResponse = {
+	ok: boolean;
+	institutionName: string | null;
+	accountName: string;
+	insertedCount: number;
+	duplicateSkippedCount: number;
+	overlapSkippedCount: number;
+	importedRangeStart: string | null;
+	importedRangeEnd: string | null;
+};
+
 type Color = {
 	position: number;
 	color: string;
@@ -606,6 +617,23 @@ export const importCapitalOneCsv = async (
 	}
 };
 
+export const importAppleCsv = async (csvText: string, fileName?: string): Promise<ImportAppleCsvResponse> => {
+	try {
+		return await apiClient.post<
+			ImportAppleCsvResponse,
+			{
+				csvText: string;
+				fileName?: string;
+			}
+		>("/transactions/import/apple", {
+			csvText,
+			fileName,
+		});
+	} catch (error) {
+		return throwWithMessage(error instanceof Error ? error.message : "Could not import Apple transactions.");
+	}
+};
+
 export const getColors = async (): Promise<ColorsByName> => {
 	try {
 		return await apiClient.get<ColorsByName>("/categories/colors");
@@ -624,6 +652,7 @@ export type {
 	PlaidItem,
 	PlaidSyncSummary,
 	ImportCapitalOneCsvResponse,
+	ImportAppleCsvResponse,
 	DashboardFilter,
 	DashboardStats,
 	DashboardResponse,

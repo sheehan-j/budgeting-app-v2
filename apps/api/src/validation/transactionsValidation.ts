@@ -46,3 +46,8 @@ export const importCapitalOneCsvBodySchema = z.object({
 	csvText: z.string().min(1).max(2_000_000),
 	fileName: z.string().trim().min(1).max(255).optional(),
 });
+
+export const importAppleCsvBodySchema = z.object({
+	csvText: z.string().min(1).max(2_000_000),
+	fileName: z.string().trim().min(1).max(255).optional(),
+});

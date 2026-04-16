@@ -7,13 +7,14 @@ import Navbar from "../components/navbar/Navbar";
 import NotificationBanner from "../components/common/NotificationBanner";
 import SettingsNavBar from "../components/settingspage/SettingsNavBar";
 import CategoriesSettings from "../components/settingspage/categories/CategoriesSettings";
+import ImportSettings from "../components/settingspage/import/ImportSettings";
 
 const Settings = () => {
 	const { activeSetting, setActiveSetting } = useDataStore((state) => ({
 		activeSetting: state.activeSetting,
 		setActiveSetting: state.setActiveSetting,
 	}));
-	const settings = ["Connected Accounts", "Merchants", "Categories"];
+	const settings = ["Connected Accounts", "Merchants", "Categories", "Import"];
 
 	useEffect(() => {
 		if (activeSetting === null) setActiveSetting(settings[0]);
@@ -30,6 +31,7 @@ const Settings = () => {
 					{activeSetting === "Connected Accounts" && <PlaidConnections />}
 					{activeSetting === "Merchants" && <MerchantSettings />}
 					{activeSetting === "Categories" && <CategoriesSettings />}
+					{activeSetting === "Import" && <ImportSettings />}
 				</div>
 			</div>
 			<NotificationBanner />
