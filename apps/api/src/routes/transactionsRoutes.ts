@@ -221,9 +221,6 @@ transactionsRoutes.post("/import/capital-one", async (c) => {
 
 transactionsRoutes.post("/import/apple", async (c) => {
 	try {
-		if (!(String(process.env.IMPORT_ENABLED ?? "").toLowerCase() === "true"))
-			return c.json({ error: "This feature is disabled" }, 403);
-
 		const user = getAuthenticatedUser(c);
 		if (!user) return unauthorized(c);
 
